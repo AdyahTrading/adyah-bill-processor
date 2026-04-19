@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "description": "Per-vendor cache mapping vendor bill line text to the correct Odoo product. Written by /process-vendor-bill after each successful PO, consulted by /extract-bill before fuzzy matching. Key normalization: uppercase + collapse whitespace.",
+  "updated_at": "2026-04-19T00:00:00Z",
+  "vendors": {
+    "37ACVPG8182A1ZC": {
+      "name": "SRI LAKSHMI SAI AGENCIES",
+      "aliases": {
+        "STR ORG S&T39GX4 2X BOP CL90": {
+          "product_id": 1221,
+          "name": "SANTOOR TOTAL SKIN CARE 4 N X RS.40/-",
+          "barcode": "8901399007811",
+          "hsn": "34011190",
+          "list_price": 40.0,
+          "learned_at": "2026-04-19T00:00:00Z",
+          "learned_from_batch": "manual_seed_W123584G26000006",
+          "times_seen": 1
+        }
+      }
+    }
+  }
+}

@@ -2022,19 +2022,31 @@ const UI = {
 
   async probeExtraction() {
     // One-shot: force an immediate Drive list + fetch, bypassing the 15s timer.
-    if (!state.batchFolderId || !state.token || state.billExtracted) return;
+    // If we already have an extracted JSON we re-fetch anyway — the PC-side
+    // skill may have refreshed it with fuzzy product matches.
+    if (!state.batchFolderId || !state.token) return;
     try {
       const files = await driveListChildren(state.batchFolderId);
       const hit = files.find(f => f.name === "bill_extracted.json");
       if (hit) {
         const data = await driveDownloadJson(hit.id);
+        const wasPresent = !!state.billExtracted;
+        const oldAt = state.billExtracted?.enriched_at || state.billExtracted?.extracted_at;
+        const newAt = data.enriched_at || data.extracted_at;
         state.billExtracted = data;
         state.billExtractedAt = new Date().toISOString();
         persistState();
         stopExtractionPoll();
         this._updateExtractionBadge();
         if (this.currentStep === 3) this.renderReview();
-        toast("Bill extracted — " + (data.lines?.length || 0) + " line items ready", "ok");
+        const matched = (data.lines || []).filter(l => l.product_id).length;
+        if (wasPresent && oldAt !== newAt) {
+          toast(`Bill data refreshed — ${matched}/${data.lines?.length || 0} lines mapped to Odoo`, "ok");
+        } else if (wasPresent) {
+          toast(`No change — ${matched}/${data.lines?.length || 0} lines mapped`, "");
+        } else {
+          toast(`Bill extracted — ${data.lines?.length || 0} lines, ${matched} mapped to Odoo`, "ok");
+        }
       } else {
         const names = files.map(f => f.name).join(", ") || "(none)";
         toast(`Drive lists ${files.length} file(s) in batch folder: ${names}. No bill_extracted.json yet.`, "warn");

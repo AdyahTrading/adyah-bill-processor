@@ -126,6 +126,37 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 }
 .scan-input::placeholder { color: var(--text-mute); font-family: inherit; letter-spacing: normal; }
 
+/* Secondary product search (fallback when barcode is missing / damaged) */
+.search-wrap { position: relative; margin-top: 14px; }
+.search-input {
+  width: 100%; background: var(--bg-soft); color: var(--text);
+  border: 1px dashed var(--line); border-radius: 10px;
+  padding: 12px 40px 12px 14px; font-size: 14px;
+}
+.search-input::placeholder { color: var(--text-mute); }
+.search-input:focus { outline: 2px solid var(--flame); outline-offset: 1px; border-style: solid; border-color: var(--flame); }
+.search-wrap .search-status {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: var(--text-mute); pointer-events: none;
+}
+.search-results {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px;
+  max-height: 340px; overflow: auto; box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+}
+.search-results.hidden { display: none; }
+.search-result {
+  padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.search-result:last-child { border-bottom: 0; }
+.search-result:hover, .search-result.active { background: var(--bg-soft); }
+.search-result .r-name { font-size: 14px; font-weight: 600; }
+.search-result .r-sub { font-size: 11px; color: var(--text-mute); font-family: ui-monospace, monospace; }
+.search-result .r-sub b { color: var(--flame); font-weight: 700; }
+.search-result .r-nobarcode { color: var(--warn); font-weight: 600; }
+.search-empty { padding: 14px; color: var(--text-mute); font-size: 13px; text-align: center; }
+
 .items-list { display: flex; flex-direction: column; gap: 10px; }
 .item {
   background: var(--bg-soft); border: 1px solid var(--line);
@@ -190,6 +221,50 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
 .hidden { display: none !important; }
+
+/* Batch cards inside the capture panel ---------------------------------- */
+.batches-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+.batch-card {
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: start;
+}
+.batch-card .bc-thumb img {
+  width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line);
+  cursor: zoom-in;
+}
+.batch-card .bc-idx {
+  font-size: 11px; color: var(--flame); font-weight: 700; letter-spacing: 0.4px;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.batch-card .bc-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.batch-card .bc-body .grid2 { gap: 8px; }
+.batch-card input {
+  padding: 8px 10px; font-size: 14px; border-radius: 8px;
+}
+.batch-card .bc-remove {
+  background: transparent; border: 1px solid var(--line); color: var(--text-mute);
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+}
+.batch-card .bc-remove:hover { border-color: var(--err); color: var(--err); }
+.total-qty-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-card); border: 1px solid var(--line); padding: 6px 10px; border-radius: 999px; font-size: 13px;
+}
+.total-qty-chip b { color: var(--flame); }
+
+/* Product-context chips shown in the capture panel header */
+.ctx-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ctx-chip {
+  background: var(--bg-card); border: 1px solid var(--line); color: var(--text-mute);
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.unknown-chip {
+  display: inline-block; margin-top: 6px;
+  background: rgba(245, 158, 11, 0.12); border: 1px solid var(--warn); color: var(--warn);
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.2px;
+}
 
 /* Camera modal ---------------------------------------------------------- */
 .cam-modal {
@@ -259,7 +334,7 @@ footer.foot {
   </select>
   <button id="authBtn" class="auth" type="button">
     <span class="dot"></span>
-    <span id="authLabel">Sign In</span>
+    <span id="authLabel">Connect Drive</span>
   </button>
 </header>
 
@@ -322,42 +397,45 @@ footer.foot {
 
       <label class="label">Scan barcode <span class="muted">(scanner types here automatically)</span></label>
       <input type="text" id="barcodeInput" class="scan-input"
-             placeholder="Waiting for scanner…" inputmode="none" autocomplete="off" />
+             placeholder="Waiting for scanner… or tap to type"
+             inputmode="numeric" enterkeyhint="done"
+             autocomplete="off" autocapitalize="off" autocorrect="off"
+             spellcheck="false" />
+
+      <div class="search-wrap">
+        <input type="text" id="searchInput" class="search-input"
+               placeholder="No barcode? Search by product name…" autocomplete="off" />
+        <div class="search-status" id="searchStatus">loading catalog…</div>
+        <div class="search-results hidden" id="searchResults"></div>
+      </div>
 
       <div id="capturePanel" class="hidden" style="margin-top: 14px;">
         <div class="card" style="margin: 0; background: var(--bg-soft);">
           <div class="row between">
             <div><b id="capBarcode" style="font-family: ui-monospace, monospace; color: var(--flame); font-size: 16px;"></b>
-              <div class="muted" style="font-size: 12px;" id="capStatus">Capture label photo(s)</div>
+              <div class="muted" style="font-size: 12px;" id="capStatus">Add one batch per distinct lot / expiry date on this SKU</div>
             </div>
             <button id="cancelCapture" class="btn ghost small">Cancel</button>
           </div>
 
-          <div class="row" style="margin-top: 12px;">
-            <button type="button" class="file-btn" id="labelCameraBtn">
-              📸 Capture label
-            </button>
-            <label class="file-btn">
+          <div id="batchesList" class="batches-list" style="margin-top: 14px;"></div>
+
+          <div class="row" style="margin-top: 10px;">
+            <button type="button" class="btn secondary" id="addBatchCamBtn">➕ Add batch (camera)</button>
+            <label class="btn ghost" style="cursor:pointer;">
               🖼️ Upload photo
-              <input type="file" accept="image/*" id="labelUpload" />
+              <input type="file" accept="image/*" id="labelUpload" style="display:none" />
             </label>
             <input type="file" accept="image/*" capture="environment" id="labelCameraFallback" style="display:none" />
           </div>
 
-          <div id="labelThumbs" class="row" style="margin-top: 10px;"></div>
-
-          <div class="grid2" style="margin-top: 14px;">
-            <div>
-              <label class="label">Received qty</label>
-              <input type="number" id="receivedQty" min="0" step="any" value="1" />
-            </div>
-            <div>
-              <label class="label">Unit (optional)</label>
-              <input type="text" id="unitHint" placeholder="pcs / kg / case" />
-            </div>
+          <div style="margin-top: 14px;">
+            <label class="label">Unit (optional)</label>
+            <input type="text" id="unitHint" placeholder="pcs / kg / case" />
           </div>
 
-          <div class="nav-btns">
+          <div class="nav-btns" style="align-items: center;">
+            <div class="total-qty-chip">Total qty: <b id="totalQty">0</b> <span id="batchCountLbl" class="muted" style="font-size:12px;"></span></div>
             <button id="saveItem" class="btn" disabled>Save &amp; next item</button>
           </div>
         </div>
@@ -639,6 +717,144 @@ async function driveUpload(blob, filename, parentId) {
 }
 
 /* -------------------------------------------------------------------------
+ * Product catalog — loaded once on startup from products.json served
+ * alongside index.html. Used for:
+ *   1) the "No barcode?" name-search fallback in Step 2
+ *   2) enriching scanned barcodes with product_id / name / MRP hints
+ *      (so the warehouse PC already has a product_id to pass straight to
+ *       create_draft_purchase_order even when a barcode is ambiguous).
+ *
+ * products.json shape (array):
+ *   [{ product_id, name, barcode, hsn, list_price, sale_price, category }, ...]
+ * ------------------------------------------------------------------------- */
+const Catalog = {
+  items: [],                 // raw records
+  _nameIdx: [],              // lowercased names in same order
+  _barcodeMap: new Map(),    // barcode -> record
+  loaded: false,
+  loadedAt: null,
+
+  async load() {
+    const status = $("searchStatus");
+    try {
+      const r = await fetch("products.json", { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+      this.items = items;
+      this._nameIdx = items.map(x => (x.name || "").toLowerCase());
+      this._barcodeMap.clear();
+      for (const it of items) {
+        if (it.barcode) this._barcodeMap.set(String(it.barcode).trim(), it);
+      }
+      this.loaded = true;
+      this.loadedAt = new Date();
+      status.textContent = items.length.toLocaleString() + " SKUs · ready";
+      status.style.color = "var(--ok)";
+    } catch (e) {
+      status.textContent = "catalog unavailable";
+      status.style.color = "var(--err)";
+      console.warn("products.json load failed:", e);
+    }
+  },
+
+  byBarcode(bc) {
+    return this._barcodeMap.get(String(bc || "").trim()) || null;
+  },
+
+  search(query, limit = 25) {
+    const q = (query || "").trim().toLowerCase();
+    if (q.length < 2) return [];
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const out = [];
+    for (let i = 0; i < this._nameIdx.length; i++) {
+      const nm = this._nameIdx[i];
+      if (!nm) continue;
+      let ok = true;
+      for (const t of tokens) { if (nm.indexOf(t) === -1) { ok = false; break; } }
+      if (ok) {
+        out.push(this.items[i]);
+        if (out.length >= limit) break;
+      }
+    }
+    return out;
+  },
+};
+
+/* -------------------------------------------------------------------------
+ * Search UI (fallback for products without a barcode)
+ * ------------------------------------------------------------------------- */
+const Search = {
+  _timer: null,
+
+  attach() {
+    const input = $("searchInput");
+    const box = $("searchResults");
+
+    input.addEventListener("input", () => {
+      clearTimeout(this._timer);
+      this._timer = setTimeout(() => this.run(input.value), 120);
+    });
+    input.addEventListener("focus", () => {
+      if (input.value.trim().length >= 2) this.run(input.value);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { this.close(); input.blur(); }
+      if (e.key === "Enter") {
+        const first = box.querySelector(".search-result");
+        if (first) first.click();
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-wrap")) this.close();
+    });
+  },
+
+  run(query) {
+    const box = $("searchResults");
+    const q = (query || "").trim();
+    if (q.length < 2) { this.close(); return; }
+    if (!Catalog.loaded) {
+      box.innerHTML = `<div class="search-empty">Catalog not loaded — make sure <code>products.json</code> is deployed alongside <code>index.html</code>.</div>`;
+      box.classList.remove("hidden");
+      return;
+    }
+    const results = Catalog.search(q, 25);
+    if (!results.length) {
+      box.innerHTML = `<div class="search-empty">No match. Try a different spelling or a shorter keyword.</div>`;
+      box.classList.remove("hidden");
+      return;
+    }
+    box.innerHTML = "";
+    results.forEach((p, i) => {
+      const row = document.createElement("div");
+      row.className = "search-result" + (i === 0 ? " active" : "");
+      const bc = p.barcode ? `<b>${p.barcode}</b>` : `<span class="r-nobarcode">NO BARCODE</span>`;
+      const parts = [bc];
+      if (p.hsn) parts.push("HSN " + p.hsn);
+      if (p.list_price != null) parts.push("MRP ₹" + p.list_price);
+      if (p.category) parts.push(p.category);
+      row.innerHTML = `<div class="r-name">${p.name}</div>
+                      <div class="r-sub">${parts.join(" · ")}</div>`;
+      row.onclick = () => { this.select(p); };
+      box.appendChild(row);
+    });
+    box.classList.remove("hidden");
+  },
+
+  select(p) {
+    this.close();
+    const bc = p.barcode ? String(p.barcode).trim() : ("NOBC-" + p.product_id);
+    $("searchInput").value = "";
+    UI.beginCapture(bc, p, "search");
+  },
+
+  close() {
+    $("searchResults").classList.add("hidden");
+  },
+};
+
+/* -------------------------------------------------------------------------
  * In-page camera — getUserMedia with a back-camera preference.
  * Works on desktop (webcam) and Android tablets (rear camera). Falls back
  * to <input capture> if getUserMedia is blocked or unavailable.
@@ -771,7 +987,14 @@ const Scanner = {
   attach() {
     const ind = $("scannerIndicator");
     const input = $("barcodeInput");
-    const focusIt = () => { if (UI.currentStep === 2 && !state.capture) input.focus(); };
+    const focusIt = (e) => {
+      if (UI.currentStep !== 2 || state.capture) return;
+      // Don't steal focus from other focusable/interactive elements
+      // (search input, buttons, capture panel fields, camera modal, etc.)
+      const t = e && e.target;
+      if (t && t.closest("input, textarea, button, select, label, a, .cam-modal, #searchResults, #capturePanel")) return;
+      input.focus();
+    };
     document.addEventListener("click", focusIt);
     document.addEventListener("keydown", () => { ind.classList.add("ready"); });
     input.addEventListener("focus", () => { ind.classList.add("ready"); ind.querySelector("span:last-child").textContent = "Scanner ready"; });
@@ -792,7 +1015,8 @@ const Scanner = {
         return;
       }
     }
-    UI.beginCapture(code);
+    const meta = Catalog.loaded ? Catalog.byBarcode(code) : null;
+    UI.beginCapture(code, meta);
   },
 };
 
@@ -845,36 +1069,135 @@ const UI = {
     toast("Bill captured", "ok");
   },
 
-  beginCapture(barcode) {
-    state.capture = { id: crypto.randomUUID(), barcode, qty: 1, unit: "", labels: [] };
-    $("capBarcode").textContent = barcode;
-    $("capStatus").textContent = "Capture label photo(s)";
-    $("labelThumbs").innerHTML = "";
-    $("receivedQty").value = "1";
+  beginCapture(barcode, productMeta = null, source = "scan") {
+    const hasBarcode = barcode && !String(barcode).startsWith("NOBC-");
+    state.capture = {
+      id: crypto.randomUUID(),
+      barcode: hasBarcode ? barcode : null,
+      product_id: productMeta?.product_id || null,
+      product_name: productMeta?.name || null,
+      odoo_hsn: productMeta?.hsn || null,
+      odoo_list_price: productMeta?.list_price ?? null,
+      odoo_category: productMeta?.category || null,
+      source,
+      unit: "",
+      batches: [],
+    };
+    const header = $("capBarcode");
+    if (productMeta) {
+      // Matched in local catalog — show name + full context chips
+      const bcLine = hasBarcode
+        ? `<span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--text-mute);">${barcode}</span>`
+        : `<span class="r-nobarcode" style="font-size:11px;letter-spacing:0.5px;">NO BARCODE · id ${productMeta.product_id}</span>`;
+      const chips = [];
+      if (productMeta.hsn)        chips.push(`<span class="ctx-chip">HSN ${productMeta.hsn}</span>`);
+      if (productMeta.list_price != null)
+                                  chips.push(`<span class="ctx-chip">MRP ₹${productMeta.list_price}</span>`);
+      if (productMeta.category)   chips.push(`<span class="ctx-chip">${productMeta.category}</span>`);
+      header.innerHTML =
+        `<div style="font-size:15px;color:var(--text);font-weight:700;line-height:1.25;">${productMeta.name}</div>
+         <div style="margin-top:2px;">${bcLine}</div>
+         ${chips.length ? `<div class="ctx-chips">${chips.join("")}</div>` : ""}`;
+    } else {
+      // No match in local catalog — allow continuation, flag as unknown
+      header.innerHTML =
+        `<div style="font-family:ui-monospace,monospace;font-size:15px;">${barcode}</div>
+         <div class="unknown-chip">⚠ Unknown barcode — new product</div>
+         <div class="muted" style="font-size:11px;margin-top:3px;">Capture the label &amp; qty — warehouse PC will create the product in Odoo when processing.</div>`;
+    }
     $("unitHint").value = "";
     $("capturePanel").classList.remove("hidden");
-    $("saveItem").disabled = true;
+    this.renderBatches();
     $("barcodeInput").blur();
   },
 
   async addLabelPhoto(file) {
     if (!state.capture || !file) return;
     const dataUrl = await readAsDataURL(file);
-    const name = `label_${state.capture.labels.length + 1}.${(file.type.split("/")[1] || "jpg").split(";")[0]}`;
-    state.capture.labels.push({ dataUrl, mime: file.type || "image/jpeg", name });
-    const th = document.createElement("img");
-    th.src = dataUrl;
-    th.style.cssText = "width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);";
-    $("labelThumbs").appendChild(th);
-    $("saveItem").disabled = false;
-    $("capStatus").textContent = state.capture.labels.length + " label photo" + (state.capture.labels.length > 1 ? "s" : "") + " captured — you can add more or save";
+    state.capture.batches.push({
+      id: crypto.randomUUID(),
+      photo: { dataUrl, mime: file.type || "image/jpeg" },
+      qty: 1,
+      lot_name: "",
+      expiration_date: "",
+      mrp: null,
+    });
+    this.renderBatches();
+  },
+
+  renderBatches() {
+    const list = $("batchesList");
+    list.innerHTML = "";
+    const batches = state.capture?.batches || [];
+    batches.forEach((b, i) => {
+      const card = document.createElement("div");
+      card.className = "batch-card";
+      card.innerHTML = `
+        <div class="bc-thumb"><img src="${b.photo.dataUrl}" alt="batch ${i+1}" /></div>
+        <div class="bc-body">
+          <div class="bc-idx">Batch ${i + 1}</div>
+          <div class="grid2">
+            <div>
+              <label class="label">Qty *</label>
+              <input type="number" class="bc-qty" min="0" step="any" value="${b.qty}" />
+            </div>
+            <div>
+              <label class="label">Batch no <span class="muted">(optional)</span></label>
+              <input type="text" class="bc-lot" placeholder="auto-detect" value="${b.lot_name || ''}" />
+            </div>
+          </div>
+          <div class="grid2">
+            <div>
+              <label class="label">Expiry <span class="muted">(MM/YYYY)</span></label>
+              <input type="text" class="bc-exp" placeholder="auto-detect" value="${b.expiration_date || ''}" />
+            </div>
+            <div>
+              <label class="label">MRP <span class="muted">(₹)</span></label>
+              <input type="number" class="bc-mrp" step="any" placeholder="auto-detect" value="${b.mrp ?? ''}" />
+            </div>
+          </div>
+        </div>
+        <button type="button" class="bc-remove" title="Remove batch">✕</button>
+      `;
+      const qIn = card.querySelector(".bc-qty");
+      qIn.oninput = () => { b.qty = parseFloat(qIn.value) || 0; this._refreshTotals(); };
+      card.querySelector(".bc-lot").oninput = (e) => b.lot_name = e.target.value.trim();
+      card.querySelector(".bc-exp").oninput = (e) => b.expiration_date = e.target.value.trim();
+      card.querySelector(".bc-mrp").oninput = (e) => {
+        const v = parseFloat(e.target.value);
+        b.mrp = isNaN(v) ? null : v;
+      };
+      card.querySelector(".bc-remove").onclick = () => {
+        if (!confirm("Remove Batch " + (i + 1) + "?")) return;
+        state.capture.batches.splice(i, 1);
+        this.renderBatches();
+      };
+      list.appendChild(card);
+    });
+    this._refreshTotals();
+  },
+
+  _refreshTotals() {
+    const batches = state.capture?.batches || [];
+    const total = batches.reduce((a, b) => a + (parseFloat(b.qty) || 0), 0);
+    $("totalQty").textContent = total;
+    $("batchCountLbl").textContent = batches.length
+      ? ` · ${batches.length} batch${batches.length > 1 ? "es" : ""}`
+      : "";
+    const ok = batches.length > 0 && total > 0 && batches.every(b => (parseFloat(b.qty) || 0) > 0);
+    $("saveItem").disabled = !ok;
+    $("capStatus").textContent = batches.length
+      ? "Tap “➕ Add batch” for any additional lot/expiry. Edit qty per batch."
+      : "Add one batch per distinct lot / expiry date on this SKU";
   },
 
   saveCapture() {
     if (!state.capture) return;
-    const qty = parseFloat($("receivedQty").value || "0");
-    if (!qty || qty <= 0) { toast("Enter a positive quantity", "err"); return; }
-    state.capture.qty = qty;
+    const batches = state.capture.batches;
+    if (!batches.length) { toast("Add at least one batch", "err"); return; }
+    if (batches.some(b => !((parseFloat(b.qty) || 0) > 0))) {
+      toast("Every batch needs qty > 0", "err"); return;
+    }
     state.capture.unit = $("unitHint").value.trim();
     state.items.push(state.capture);
     state.capture = null;
@@ -891,6 +1214,10 @@ const UI = {
     setTimeout(() => $("barcodeInput").focus(), 50);
   },
 
+  _itemTotalQty(it) {
+    return (it.batches || []).reduce((a, b) => a + (parseFloat(b.qty) || 0), 0);
+  },
+
   renderItems() {
     const list = $("itemsList");
     list.innerHTML = "";
@@ -900,21 +1227,40 @@ const UI = {
       row.className = "item";
       const thumbs = document.createElement("div");
       thumbs.className = "thumbs";
-      it.labels.forEach(l => { const img = new Image(); img.src = l.dataUrl; thumbs.appendChild(img); });
+      (it.batches || []).forEach(b => {
+        const img = new Image(); img.src = b.photo.dataUrl; thumbs.appendChild(img);
+      });
+      const total = this._itemTotalQty(it);
+      const bn = (it.batches || []).length;
+      const breakdown = (it.batches || [])
+        .map((b, i) => {
+          const bits = [`Batch ${i + 1}`, `qty ${b.qty}`];
+          if (b.lot_name) bits.push(b.lot_name);
+          if (b.expiration_date) bits.push("exp " + b.expiration_date);
+          return bits.join(" · ");
+        })
+        .join(" | ");
+      const title = it.product_name
+        ? `<div class="bc" style="color:var(--text);font-family:inherit;font-weight:700;font-size:14px;">${it.product_name}</div>
+           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE · id ${it.product_id}</span>`}</div>`
+        : `<div class="bc">${it.barcode}</div>`;
       const meta = document.createElement("div");
       meta.className = "meta";
-      meta.innerHTML = `<div class="bc">${it.barcode}</div>
-                        <div class="sub">${it.labels.length} photo${it.labels.length>1?"s":""}${it.unit ? " · " + it.unit : ""}</div>`;
-      const qty = document.createElement("div");
-      qty.className = "qty";
-      qty.innerHTML = `<button data-a="-">−</button>
-                       <input type="number" value="${it.qty}" step="any" min="0" />
-                       <button data-a="+">+</button>`;
-      qty.querySelector("[data-a='-']").onclick = () => { it.qty = Math.max(0, (+qty.querySelector("input").value || 0) - 1); qty.querySelector("input").value = it.qty; };
-      qty.querySelector("[data-a='+']").onclick = () => { it.qty = (+qty.querySelector("input").value || 0) + 1; qty.querySelector("input").value = it.qty; };
-      qty.querySelector("input").oninput = (e) => { it.qty = parseFloat(e.target.value) || 0; };
+      meta.innerHTML = `${title}
+                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""}</div>
+                        <div class="sub" style="font-size:11px;">${breakdown || "—"}</div>`;
       const actions = document.createElement("div");
       actions.className = "actions";
+      const edit = document.createElement("button"); edit.className = "btn ghost small"; edit.textContent = "Edit";
+      edit.onclick = () => {
+        state.capture = { ...it, batches: it.batches.map(b => ({ ...b })) };
+        state.items.splice(idx, 1);
+        this.renderItems();
+        $("capBarcode").textContent = it.barcode;
+        $("unitHint").value = it.unit || "";
+        $("capturePanel").classList.remove("hidden");
+        this.renderBatches();
+      };
       const del = document.createElement("button"); del.className = "btn ghost small"; del.textContent = "Remove";
       del.onclick = () => {
         if (!confirm("Remove " + it.barcode + "?")) return;
@@ -922,10 +1268,11 @@ const UI = {
         this.renderItems();
         $("toStep3").disabled = state.items.length === 0;
       };
+      actions.appendChild(edit);
       actions.appendChild(del);
       row.appendChild(thumbs);
       row.appendChild(meta);
-      row.appendChild(qty);
+      row.appendChild(document.createElement("div"));
       row.appendChild(actions);
       list.appendChild(row);
     });
@@ -944,11 +1291,29 @@ const UI = {
       row.className = "item";
       const thumbs = document.createElement("div");
       thumbs.className = "thumbs";
-      it.labels.forEach(l => { const img = new Image(); img.src = l.dataUrl; thumbs.appendChild(img); });
+      (it.batches || []).forEach(b => {
+        const img = new Image(); img.src = b.photo.dataUrl; thumbs.appendChild(img);
+      });
+      const total = this._itemTotalQty(it);
+      const bn = (it.batches || []).length;
+      const breakdown = (it.batches || [])
+        .map((b, i) => {
+          const bits = [`B${i + 1} × ${b.qty}`];
+          if (b.lot_name) bits.push(b.lot_name);
+          if (b.expiration_date) bits.push("exp " + b.expiration_date);
+          if (b.mrp != null) bits.push("MRP ₹" + b.mrp);
+          return bits.join(" ");
+        })
+        .join(" | ");
+      const title = it.product_name
+        ? `<div class="bc" style="color:var(--text);font-family:inherit;font-weight:700;font-size:14px;">${it.product_name}</div>
+           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE · id ${it.product_id}</span>`}</div>`
+        : `<div class="bc">${it.barcode}</div>`;
       const meta = document.createElement("div");
       meta.className = "meta";
-      meta.innerHTML = `<div class="bc">${it.barcode}</div>
-                        <div class="sub">Qty ${it.qty}${it.unit ? " " + it.unit : ""} · ${it.labels.length} photo${it.labels.length>1?"s":""}</div>`;
+      meta.innerHTML = `${title}
+                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""}</div>
+                        <div class="sub" style="font-size:11px;">${breakdown}</div>`;
       row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
       list.appendChild(row);
     });
@@ -957,10 +1322,13 @@ const UI = {
   renderUploadSummary() {
     const s = $("uploadSummary");
     s.innerHTML = "";
+    const totalBatches = state.items.reduce((a,i) => a + (i.batches?.length || 0), 0);
+    const totalQty = state.items.reduce((a,i) => a + UI._itemTotalQty(i), 0);
     const items = [
       { label: `Branch · ${state.companyLabel}`, cls: "ok" },
-      { label: `${state.items.length} item${state.items.length === 1 ? "" : "s"}`, cls: "ok" },
-      { label: `${state.items.reduce((a,i)=>a+i.labels.length,0)} label photos`, cls: "" },
+      { label: `${state.items.length} SKU${state.items.length === 1 ? "" : "s"}`, cls: "ok" },
+      { label: `${totalBatches} batch${totalBatches === 1 ? "" : "es"}`, cls: "" },
+      { label: `${totalQty} total units`, cls: "" },
       { label: state.bill ? ("Bill · " + state.bill.name) : "No bill", cls: state.bill ? "ok" : "warn" },
     ];
     if (state.vendorHint) items.push({ label: "Vendor · " + state.vendorHint, cls: "" });
@@ -1019,17 +1387,40 @@ async function doUpload() {
     await driveUpload(state.bill.file, billName, batchFolderId);
     tick(billName);
 
-    // 2. each label photo
+    // 2. one photo per batch (batch[i].photo)
+    const itemsMeta = [];
     for (const it of state.items) {
+      const itemMeta = {
+        barcode: it.barcode || null,
+        product_id: it.product_id || null,
+        product_name: it.product_name || null,
+        source: it.source || null,
+        odoo_list_price: it.odoo_list_price ?? null,
+        odoo_hsn: it.odoo_hsn || null,
+        unit: it.unit || null,
+        total_qty: UI._itemTotalQty(it),
+        batches: [],
+      };
+      const keyStem = it.barcode ? slug(it.barcode) : `noBC-${it.product_id || "x"}`;
       let i = 0;
-      for (const l of it.labels) {
+      for (const b of (it.batches || [])) {
         i++;
-        const fn = `${slug(it.barcode)}_${String(i).padStart(2,"0")}.${(l.mime.split("/")[1] || "jpg").split(";")[0]}`;
+        const ext = ((b.photo.mime || "image/jpeg").split("/")[1] || "jpg").split(";")[0];
+        const fn = `${keyStem}_b${String(i).padStart(2,"0")}.${ext}`;
         log("Uploading " + fn + "…");
-        const blob = dataUrlToBlob(l.dataUrl);
+        const blob = dataUrlToBlob(b.photo.dataUrl);
         await driveUpload(blob, fn, labelsFolderId);
         tick(fn);
+        itemMeta.batches.push({
+          batch_index: i,
+          label_file: fn,
+          qty: parseFloat(b.qty) || 0,
+          lot_name: b.lot_name || null,
+          expiration_date: b.expiration_date || null,
+          mrp: b.mrp,
+        });
       }
+      itemsMeta.push(itemMeta);
     }
 
     // 3. meta.json
@@ -1041,14 +1432,8 @@ async function doUpload() {
       vendor_hint: state.vendorHint || null,
       bill_reference: state.billRef || null,
       notes: state.reviewNotes || null,
-      source: "adyah-bill-processor-web v1",
-      items: state.items.map(it => ({
-        barcode: it.barcode,
-        received_qty: it.qty,
-        unit: it.unit || null,
-        label_files: it.labels.map((_, i) =>
-          `${slug(it.barcode)}_${String(i+1).padStart(2,"0")}.jpg`),
-      })),
+      source: "adyah-bill-processor-web v2 (multi-batch)",
+      items: itemsMeta,
     };
     log("Uploading meta.json…");
     const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: "application/json" });
@@ -1077,6 +1462,8 @@ async function doUpload() {
 window.addEventListener("DOMContentLoaded", () => {
   initGIS();
   Scanner.attach();
+  Search.attach();
+  Catalog.load();
 
   $("companySelect").addEventListener("change", (e) => {
     state.companyId = parseInt(e.target.value, 10);
@@ -1092,7 +1479,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("billCameraFallback").addEventListener("change", (e) => { UI.handleBillFile(e.target.files[0]); e.target.value = ""; });
   $("billUpload").addEventListener("change", (e) => UI.handleBillFile(e.target.files[0]));
 
-  $("labelCameraBtn").addEventListener("click", () => Camera.open("label"));
+  $("addBatchCamBtn").addEventListener("click", () => Camera.open("label"));
   $("labelCameraFallback").addEventListener("change", (e) => { UI.addLabelPhoto(e.target.files[0]); e.target.value = ""; });
   $("labelUpload").addEventListener("change", (e) => { UI.addLabelPhoto(e.target.files[0]); e.target.value = ""; });
 

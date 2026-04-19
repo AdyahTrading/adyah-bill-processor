@@ -25,7 +25,11 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased; }
+  -webkit-font-smoothing: antialiased;
+  /* Disable pull-to-refresh on Android Chrome — otherwise a stray downward
+     swipe at Step 2/3 reloads the page and wipes in-memory work. */
+  overscroll-behavior-y: contain;
+}
 body { min-height: 100dvh; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
@@ -772,6 +776,108 @@ function parseExpiry(s) {
 }
 function expiryToDMY(parsed) { return parsed ? `${_pad2(parsed.d)}/${_pad2(parsed.m)}/${parsed.y}` : ""; }
 function expiryToISO(parsed) { return parsed ? `${parsed.y}-${_pad2(parsed.m)}-${_pad2(parsed.d)}` : ""; }
+
+/* -------------------------------------------------------------------------
+ * Session persistence. Keeps an active batch alive across accidental
+ * reloads (pull-to-refresh, Chrome back-swipe, lock-screen reclaims, …).
+ * Stored in sessionStorage — scoped to this tab, cleared on tab close.
+ * ------------------------------------------------------------------------- */
+const STORAGE_KEY = "adyah-bp-session-v1";
+const STORAGE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+function persistState() {
+  try {
+    const snap = {
+      ts: Date.now(),
+      companyId: state.companyId,
+      vendorHint: state.vendorHint,
+      billRef: state.billRef,
+      reviewNotes: state.reviewNotes,
+      bill: state.bill
+        ? { dataUrl: state.bill.dataUrl, mime: state.bill.mime, name: state.bill.name }
+        : null,
+      items: state.items.map(it => ({
+        id: it.id, barcode: it.barcode,
+        product_id: it.product_id, product_name: it.product_name,
+        odoo_hsn: it.odoo_hsn, odoo_list_price: it.odoo_list_price,
+        odoo_category: it.odoo_category, source: it.source,
+        unit: it.unit,
+        batches: (it.batches || []).map(b => ({
+          id: b.id, photo: b.photo, qty: b.qty,
+          lot_name: b.lot_name, expiration_date: b.expiration_date, mrp: b.mrp,
+        })),
+      })),
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+  } catch (e) {
+    // Quota exceeded or storage disabled — not fatal, just lose recovery
+    console.warn("persistState failed:", e);
+  }
+}
+
+function clearPersistedState() {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
+function restoreState() {
+  let raw;
+  try { raw = sessionStorage.getItem(STORAGE_KEY); } catch { return false; }
+  if (!raw) return false;
+  let snap;
+  try { snap = JSON.parse(raw); } catch { clearPersistedState(); return false; }
+  if (!snap || !snap.ts || (Date.now() - snap.ts) > STORAGE_MAX_AGE_MS) {
+    clearPersistedState();
+    return false;
+  }
+
+  // Restore primitive form fields
+  if (snap.vendorHint) { state.vendorHint = snap.vendorHint; $("vendorHint").value = snap.vendorHint; }
+  if (snap.billRef)    { state.billRef    = snap.billRef;    $("billRef").value = snap.billRef; }
+  if (snap.reviewNotes){ state.reviewNotes= snap.reviewNotes;$("reviewNotes").value = snap.reviewNotes; }
+
+  // Bill
+  if (snap.bill && snap.bill.dataUrl) {
+    const blob = dataUrlToBlob(snap.bill.dataUrl);
+    state.bill = {
+      file: new File([blob], snap.bill.name || "bill.bin",
+                     { type: snap.bill.mime || blob.type || "application/octet-stream" }),
+      dataUrl: snap.bill.dataUrl,
+      mime: snap.bill.mime, name: snap.bill.name,
+    };
+    const box = $("billPreview"); box.innerHTML = "";
+    if ((snap.bill.mime || "").startsWith("image/")) {
+      const img = new Image(); img.src = snap.bill.dataUrl;
+      box.appendChild(img);
+    } else {
+      const p = document.createElement("div");
+      p.className = "chip";
+      p.textContent = "📄 " + (snap.bill.name || "bill") + "  (restored)";
+      box.appendChild(p);
+    }
+    $("toStep2").disabled = false;
+  }
+
+  // Items
+  if (Array.isArray(snap.items) && snap.items.length) {
+    state.items = snap.items;
+    UI.renderItems();
+    $("toStep3").disabled = false;
+  }
+
+  const mins = Math.max(1, Math.round((Date.now() - snap.ts) / 60000));
+  toast(`Recovered unfinished batch from ${mins} min ago`, "ok");
+  return true;
+}
+
+window.addEventListener("beforeunload", (e) => {
+  const hasWork = !!(state.bill || state.capture || (state.items && state.items.length));
+  if (hasWork) {
+    // Spec-compliant way to trigger Chrome's "Leave site?" dialog
+    e.preventDefault();
+    e.returnValue = "";
+    return "";
+  }
+});
 function readAsDataURL(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -900,6 +1006,8 @@ const Auth = {
     document.body.classList.remove("unauthed");
     $("authGate").classList.add("hidden");
     toast("Signed in as " + state.userEmail, "ok");
+    // If we had an in-progress batch before a reload, bring it back.
+    restoreState();
   },
 
   showDenied(email) {
@@ -1350,6 +1458,7 @@ const UI = {
     }
     $("toStep2").disabled = false;
     toast("Bill captured", "ok");
+    persistState();
   },
 
   beginCapture(barcode, productMeta = null, source = "scan") {
@@ -1514,6 +1623,7 @@ const UI = {
     this.renderItems();
     $("toStep3").disabled = state.items.length === 0;
     toast("Item saved", "ok");
+    persistState();
     setTimeout(() => $("barcodeInput").focus(), 50);
   },
 
@@ -1576,6 +1686,7 @@ const UI = {
         state.items.splice(idx, 1);
         this.renderItems();
         $("toStep3").disabled = state.items.length === 0;
+        persistState();
       };
       actions.appendChild(edit);
       actions.appendChild(del);
@@ -1659,6 +1770,7 @@ const UI = {
     $("newBatchBtn").classList.add("hidden");
     $("uploadBtn").disabled = false;
     $("uploadLog").textContent = "";
+    clearPersistedState();
     this.goStep(1);
   },
 };
@@ -1785,10 +1897,11 @@ window.addEventListener("DOMContentLoaded", () => {
   $("companySelect").addEventListener("change", (e) => {
     state.companyId = parseInt(e.target.value, 10);
     state.companyLabel = e.target.options[e.target.selectedIndex].textContent;
+    persistState();
   });
-  $("vendorHint").addEventListener("input", (e) => state.vendorHint = e.target.value.trim());
-  $("billRef").addEventListener("input", (e) => state.billRef = e.target.value.trim());
-  $("reviewNotes").addEventListener("input", (e) => state.reviewNotes = e.target.value.trim());
+  $("vendorHint").addEventListener("input", (e) => { state.vendorHint = e.target.value.trim(); persistState(); });
+  $("billRef").addEventListener("input",    (e) => { state.billRef    = e.target.value.trim(); persistState(); });
+  $("reviewNotes").addEventListener("input",(e) => { state.reviewNotes= e.target.value.trim(); persistState(); });
 
   $("gateSignInBtn").addEventListener("click", signIn);
   $("gateSwitchBtn").addEventListener("click", () => Auth.signOut());

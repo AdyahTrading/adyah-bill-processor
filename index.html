@@ -331,6 +331,40 @@ body.unauthed .scanner-indicator { display: none !important; }
 .batches-empty .be-body b { color: var(--text); }
 .batches-empty .be-hint { font-size: 11px; color: var(--text-mute); margin-top: 10px; font-style: italic; }
 
+/* Extraction-status badge in the topbar + spinner on Step 3 ------------- */
+.extract-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(245, 158, 11, 0.10); border: 1px solid var(--warn);
+  padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--warn);
+  font-weight: 600;
+}
+.extract-badge.ready { background: rgba(34, 197, 94, 0.10); border-color: var(--ok); color: var(--ok); }
+.extract-badge .eb-dot {
+  width: 8px; height: 8px; border-radius: 999px; background: var(--warn);
+  animation: pulse 1.4s infinite;
+}
+.extract-badge.ready .eb-dot { background: var(--ok); animation: none; }
+
+.extract-status { padding: 18px 8px; }
+.extract-status.hidden { display: none; }
+
+.merge-section { margin-top: 18px; }
+.merge-h { margin: 0 0 8px; font-size: 15px; font-weight: 700; color: var(--text); }
+.merge-list { display: flex; flex-direction: column; gap: 6px; }
+.merge-line {
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+}
+.merge-line .ml-name { font-weight: 600; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.merge-line .ml-sub { font-size: 11px; color: var(--text-mute); font-family: ui-monospace, monospace; margin-top: 2px; }
+.merge-line .ml-qty { font-family: ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--text); text-align: right; min-width: 60px; }
+.merge-line .ml-amount { font-family: ui-monospace, monospace; font-size: 13px; color: var(--text-mute); text-align: right; min-width: 80px; }
+.merge-line.matched { border-left: 3px solid var(--ok); }
+.merge-line.unmatched { border-left: 3px solid var(--warn); }
+.merge-match { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+.merge-match.ok { background: rgba(34, 197, 94, 0.15); color: var(--ok); }
+.merge-match.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+
 /* Product-context chips shown in the capture panel header */
 .ctx-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .ctx-chip {
@@ -443,6 +477,10 @@ footer.foot {
     <option value="10">Adyah TN</option>
     <option value="12">SV TN</option>
   </select>
+  <div id="extractBadge" class="extract-badge hidden" title="Bill extraction status">
+    <span class="eb-dot"></span>
+    <span id="extractBadgeTxt">extracting bill…</span>
+  </div>
   <div id="authBtn" class="auth on" title="Signed in">
     <span class="dot"></span>
     <span id="authLabel"></span>
@@ -563,11 +601,11 @@ footer.foot {
     </div>
   </section>
 
-  <!-- STEP 3: REVIEW -->
+  <!-- STEP 3: REVIEW (merged scans vs bill-extracted lines) -->
   <section id="step3" class="step-panel hidden">
     <div class="card">
       <h2>Step 3 — Review &amp; confirm</h2>
-      <p class="hint">Double-check each item before uploading. Any adjustments here stay with the batch.</p>
+      <p class="hint">Compare what the vendor billed (top) against what you physically scanned (bottom). The warehouse PC will reconcile both before creating the draft PO.</p>
 
       <div class="grid2">
         <div>
@@ -593,8 +631,25 @@ footer.foot {
         <textarea id="reviewNotes" rows="3" placeholder="Quantity mismatch, damage, vendor followup reasons…"></textarea>
       </div>
 
-      <h3 style="margin: 18px 0 8px; font-size: 15px;">Items (<span id="rvItemCount">0</span>)</h3>
-      <div id="rvItems" class="items-list"></div>
+      <!-- Extraction status + merged view -->
+      <div id="extractStatus" class="extract-status">
+        <div class="gate-spinner" style="margin: 14px auto 8px;"></div>
+        <div class="muted" style="text-align:center;font-size:13px;">
+          Waiting for Claude to extract line items from the bill…<br>
+          <span id="extractWaited">0s</span> elapsed · polling every 15s.
+        </div>
+      </div>
+
+      <div id="mergedView" class="hidden">
+        <div class="merge-section">
+          <h3 class="merge-h">📄 Vendor bill lines <span class="muted" id="mergeBillCount"></span></h3>
+          <div id="mergeBillLines" class="merge-list"></div>
+        </div>
+        <div class="merge-section">
+          <h3 class="merge-h">📦 Scanned / received <span class="muted" id="mergeScanCount"></span></h3>
+          <div id="mergeScanList" class="items-list"></div>
+        </div>
+      </div>
     </div>
 
     <div class="nav-btns">
@@ -699,12 +754,21 @@ const state = {
   billRef: "",
   reviewNotes: "",
   bill: null,              // { file: File|Blob, dataUrl, name, mime }
-  items: [],               // { id, barcode, qty, unit, labels: [{dataUrl, mime, name}] }
+  items: [],               // scanned items
   capture: null,           // in-progress item during step 2
   token: null,
-  userEmail: null,         // from Google userinfo after OAuth
+  userEmail: null,
   userName: null,
-  allowedCompanies: null,  // [4, 5, ...] from users.json; null until authed
+  allowedCompanies: null,
+
+  // --- Parallel-processing pipeline state ------------------------------
+  batchId: null,           // set when phase-A upload begins
+  batchFolderId: null,     // Drive folder id for this batch
+  phaseAUploaded: false,   // bill + phase1.json are live in Drive
+  phaseAUploading: false,  // in-flight flag
+  billExtracted: null,     // parsed bill_extracted.json when PC finishes
+  billExtractedAt: null,   // client-side timestamp
+  extractPollHandle: null, // setInterval handle
 };
 
 /* -------------------------------------------------------------------------
@@ -793,6 +857,12 @@ function persistState() {
       vendorHint: state.vendorHint,
       billRef: state.billRef,
       reviewNotes: state.reviewNotes,
+      // Parallel-pipeline state so a mid-batch reload resumes polling
+      batchId: state.batchId,
+      batchFolderId: state.batchFolderId,
+      phaseAUploaded: state.phaseAUploaded,
+      billExtracted: state.billExtracted,
+      billExtractedAt: state.billExtractedAt,
       bill: state.bill
         ? { dataUrl: state.bill.dataUrl, mime: state.bill.mime, name: state.bill.name }
         : null,
@@ -835,6 +905,12 @@ function restoreState() {
   if (snap.billRef)    { state.billRef    = snap.billRef;    $("billRef").value = snap.billRef; }
   if (snap.reviewNotes){ state.reviewNotes= snap.reviewNotes;$("reviewNotes").value = snap.reviewNotes; }
 
+  // Parallel-pipeline state
+  if (snap.batchId)        state.batchId = snap.batchId;
+  if (snap.batchFolderId)  state.batchFolderId = snap.batchFolderId;
+  if (snap.phaseAUploaded) state.phaseAUploaded = true;
+  if (snap.billExtracted)  { state.billExtracted = snap.billExtracted; state.billExtractedAt = snap.billExtractedAt; }
+
   // Bill
   if (snap.bill && snap.bill.dataUrl) {
     const blob = dataUrlToBlob(snap.bill.dataUrl);
@@ -866,6 +942,12 @@ function restoreState() {
 
   const mins = Math.max(1, Math.round((Date.now() - snap.ts) / 60000));
   toast(`Recovered unfinished batch from ${mins} min ago`, "ok");
+
+  // If Phase-A already fired but extraction is pending, resume polling
+  if (state.phaseAUploaded && !state.billExtracted && state.batchFolderId) {
+    startExtractionPoll();
+  }
+  UI._updateExtractionBadge();
   return true;
 }
 
@@ -1081,6 +1163,24 @@ async function driveCreateFolder(name, parentId) {
   if (!r.ok) throw new Error("Drive folder create failed: " + r.status + " " + await r.text());
   const j = await r.json();
   return j.id;
+}
+
+async function driveListChildren(folderId) {
+  // drive.file scope only returns files created by the app, which is exactly
+  // what we want (bill.*, phase1.json, bill_extracted.json, etc.)
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,modifiedTime)&pageSize=100`;
+  const r = await fetch(url, { headers: { Authorization: "Bearer " + state.token } });
+  if (!r.ok) throw new Error("Drive list failed: " + r.status + " " + await r.text());
+  return (await r.json()).files || [];
+}
+
+async function driveDownloadJson(fileId) {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: "Bearer " + state.token },
+  });
+  if (!r.ok) throw new Error("Drive download failed: " + r.status);
+  return r.json();
 }
 
 async function driveUpload(blob, filename, parentId) {
@@ -1369,6 +1469,96 @@ const Camera = {
 };
 
 /* -------------------------------------------------------------------------
+ * Parallel pipeline — Phase A (bill upload) + bill-extraction poller.
+ *
+ * Phase A fires on "Next" from Step 1: creates the batch folder, uploads
+ * bill.<ext> and phase1.json. The operator then moves on to Step 2 while
+ * Claude on the warehouse PC extracts line items in the background and
+ * writes bill_extracted.json alongside the bill. The tablet polls Drive
+ * every 15s to pick it up, so by the time the operator reaches Step 3 the
+ * extracted data is ready to merge with their scans.
+ * ------------------------------------------------------------------------- */
+async function phaseAUpload() {
+  if (!state.token) throw new Error("not signed in");
+  if (!state.bill)  throw new Error("no bill to upload");
+  if (!CONFIG.driveFolderId) throw new Error("driveFolderId not configured");
+  if (state.phaseAUploaded) return;   // idempotent — already done
+
+  state.phaseAUploading = true;
+  const bId = batchId();
+  state.batchId = bId;
+
+  // 1. batch folder
+  state.batchFolderId = await driveCreateFolder(bId, CONFIG.driveFolderId);
+
+  // 2. bill
+  const bill = state.bill;
+  const ext = (bill.mime || "").includes("pdf") ? "pdf"
+            : (bill.mime || "").includes("png") ? "png" : "jpg";
+  const billName = "bill." + ext;
+  await driveUpload(bill.file, billName, state.batchFolderId);
+
+  // 3. phase1.json — operator metadata known at this point
+  const phase1 = {
+    batch_id: bId,
+    phase: "A",
+    created_at: new Date().toISOString(),
+    uploaded_by_email: state.userEmail,
+    uploaded_by_name:  state.userName,
+    company_id: state.companyId,
+    company_label: state.companyLabel,
+    vendor_hint: state.vendorHint || null,
+    bill_reference: state.billRef || null,
+    bill_filename: billName,
+    bill_mime: bill.mime,
+  };
+  const blob = new Blob([JSON.stringify(phase1, null, 2)], { type: "application/json" });
+  await driveUpload(blob, "phase1.json", state.batchFolderId);
+
+  state.phaseAUploaded = true;
+  state.phaseAUploading = false;
+  persistState();
+  UI._updateExtractionBadge();
+  startExtractionPoll();
+}
+
+const EXTRACTION_POLL_MS = 15000;
+function startExtractionPoll() {
+  if (state.extractPollHandle) return;      // already polling
+  if (!state.batchFolderId) return;
+  if (state.billExtracted) return;          // already resolved
+  const tick = async () => {
+    try {
+      const files = await driveListChildren(state.batchFolderId);
+      const hit = files.find(f => f.name === "bill_extracted.json");
+      if (hit) {
+        const data = await driveDownloadJson(hit.id);
+        state.billExtracted = data;
+        state.billExtractedAt = new Date().toISOString();
+        persistState();
+        stopExtractionPoll();
+        if (UI.currentStep === 3) UI.renderReview();
+        UI._updateExtractionBadge();
+        toast("Bill extracted — " + (data.lines?.length || 0) + " line items ready", "ok");
+      }
+    } catch (e) {
+      // Silent failures during polling — often transient network blips
+      console.warn("extraction poll:", e);
+    }
+  };
+  state.extractPollHandle = setInterval(tick, EXTRACTION_POLL_MS);
+  // Kick off an immediate probe so we don't wait 15s if Claude is already done
+  setTimeout(tick, 800);
+}
+
+function stopExtractionPoll() {
+  if (state.extractPollHandle) {
+    clearInterval(state.extractPollHandle);
+    state.extractPollHandle = null;
+  }
+}
+
+/* -------------------------------------------------------------------------
  * Scanner — Bluetooth HID scanners behave as a keyboard.
  * We keep barcodeInput focused on step 2, and treat Enter as "scan complete".
  * ------------------------------------------------------------------------- */
@@ -1429,7 +1619,7 @@ const UI = {
       el.classList.toggle("active", s === n);
       el.classList.toggle("done", s < n);
     });
-    if (n === 3) this.renderReview();
+    if (n === 3) { this.renderReview(); this._tickExtractionWait(); }
     if (n === 4) this.renderUploadSummary();
     if (n === 2) { setTimeout(() => $("barcodeInput").focus(), 50); }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1703,8 +1893,141 @@ const UI = {
     $("rvVendor").textContent = state.vendorHint || "—";
     $("rvRef").textContent = state.billRef || "—";
     $("rvBill").textContent = state.bill ? state.bill.name : "—";
-    $("rvItemCount").textContent = state.items.length;
+
+    // Toggle merged-view vs waiting spinner
+    if (state.billExtracted) {
+      $("extractStatus").classList.add("hidden");
+      $("mergedView").classList.remove("hidden");
+      this._renderMergedView();
+    } else {
+      $("extractStatus").classList.remove("hidden");
+      $("mergedView").classList.add("hidden");
+    }
+    return;
+  },
+
+  _renderMergedView() {
+    const billLines = (state.billExtracted && state.billExtracted.lines) || [];
+    $("mergeBillCount").textContent = billLines.length ? `(${billLines.length})` : "";
+    $("mergeScanCount").textContent = `(${state.items.length})`;
+
+    // Build quick lookups — barcode and product_id — from scans
+    const scanByBarcode = new Map();
+    const scanByPid = new Map();
+    state.items.forEach(it => {
+      if (it.barcode) scanByBarcode.set(String(it.barcode), it);
+      if (it.product_id) scanByPid.set(it.product_id, it);
+    });
+
+    // 1. Bill lines (top)
+    const billList = $("mergeBillLines");
+    billList.innerHTML = "";
+    if (!billLines.length) {
+      billList.innerHTML = `<div class="search-empty">No line items extracted from the bill yet — PC may still be processing or the bill was unreadable.</div>`;
+    } else {
+      billLines.forEach((bl) => {
+        const matched = (bl.barcode && scanByBarcode.get(String(bl.barcode)))
+                     || (bl.product_id && scanByPid.get(bl.product_id));
+        const row = document.createElement("div");
+        row.className = "merge-line " + (matched ? "matched" : "unmatched");
+        const name = bl.name || bl.description || "(unnamed)";
+        const sub = [
+          bl.barcode ? `BC ${bl.barcode}` : null,
+          bl.hsn ? `HSN ${bl.hsn}` : null,
+          bl.rate != null ? `@ ₹${bl.rate}` : null,
+        ].filter(Boolean).join(" · ");
+        const tag = matched
+          ? `<span class="merge-match ok">MATCHED</span>`
+          : `<span class="merge-match warn">NOT SCANNED</span>`;
+        row.innerHTML = `
+          <div>
+            <div class="ml-name">${name} ${tag}</div>
+            ${sub ? `<div class="ml-sub">${sub}</div>` : ""}
+          </div>
+          <div class="ml-qty">${bl.qty ?? "—"}${bl.uom ? " " + bl.uom : ""}</div>
+          <div class="ml-amount">${bl.amount != null ? "₹" + bl.amount : ""}</div>
+        `;
+        billList.appendChild(row);
+      });
+    }
+
+    // 2. Scanned items (bottom) — reuse existing renderer markup
+    const scanList = $("mergeScanList");
+    scanList.innerHTML = "";
+    const billByBarcode = new Map((billLines || [])
+      .filter(bl => bl.barcode).map(bl => [String(bl.barcode), bl]));
+    const billByPid = new Map((billLines || [])
+      .filter(bl => bl.product_id).map(bl => [bl.product_id, bl]));
+    state.items.forEach(it => {
+      const row = document.createElement("div");
+      row.className = "item";
+      const thumbs = document.createElement("div");
+      thumbs.className = "thumbs";
+      (it.batches || []).forEach(b => {
+        const img = new Image(); img.src = b.photo.dataUrl; thumbs.appendChild(img);
+      });
+      const total = this._itemTotalQty(it);
+      const bn = (it.batches || []).length;
+      const matched = (it.barcode && billByBarcode.get(String(it.barcode)))
+                   || (it.product_id && billByPid.get(it.product_id));
+      const title = it.product_name
+        ? `<div class="bc" style="color:var(--text);font-family:inherit;font-weight:700;font-size:14px;">${it.product_name}</div>
+           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE</span>`}</div>`
+        : `<div class="bc">${it.barcode}</div>`;
+      const tag = matched
+        ? `<span class="merge-match ok">ON BILL</span>`
+        : `<span class="merge-match warn">NOT ON BILL</span>`;
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `${title}
+        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""} ${tag}</div>`;
+      row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
+      scanList.appendChild(row);
+    });
+  },
+
+  _updateExtractionBadge() {
+    const badge = $("extractBadge");
+    if (!state.phaseAUploaded) { badge.classList.add("hidden"); return; }
+    badge.classList.remove("hidden");
+    if (state.billExtracted) {
+      badge.classList.add("ready");
+      $("extractBadgeTxt").textContent = "bill extracted";
+    } else {
+      badge.classList.remove("ready");
+      $("extractBadgeTxt").textContent = "extracting bill…";
+    }
+  },
+
+  _tickExtractionWait() {
+    // Updates the "Xs elapsed" counter on the spinner every second
+    if (this._extractWaitTimer) clearInterval(this._extractWaitTimer);
+    const started = Date.now();
+    const run = () => {
+      const el = $("extractWaited");
+      if (!el || state.billExtracted || UI.currentStep !== 3) {
+        clearInterval(this._extractWaitTimer);
+        return;
+      }
+      const s = Math.floor((Date.now() - started) / 1000);
+      el.textContent = s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`;
+    };
+    this._extractWaitTimer = setInterval(run, 1000);
+    run();
+  },
+
+  _renderReviewHeaderOnly() {
+    // Stub preserved in case legacy renderReview was partially called elsewhere
+    return;
+  },
+
+  _legacyRenderReviewBody() {
+    // intentionally empty — body now rendered inside _renderMergedView
+  },
+
+  _legacyRenderPlaceholder() {
     const list = $("rvItems");
+    if (!list) return;
     list.innerHTML = "";
     state.items.forEach((it) => {
       const row = document.createElement("div");
@@ -1764,12 +2087,17 @@ const UI = {
   resetAll() {
     state.vendorHint = ""; state.billRef = ""; state.reviewNotes = "";
     state.bill = null; state.items = []; state.capture = null;
+    state.batchId = null; state.batchFolderId = null;
+    state.phaseAUploaded = false; state.phaseAUploading = false;
+    state.billExtracted = null; state.billExtractedAt = null;
+    stopExtractionPoll();
     $("vendorHint").value = ""; $("billRef").value = ""; $("reviewNotes").value = "";
     $("billPreview").innerHTML = ""; $("itemsList").innerHTML = "";
     $("toStep2").disabled = true; $("toStep3").disabled = true;
     $("newBatchBtn").classList.add("hidden");
     $("uploadBtn").disabled = false;
     $("uploadLog").textContent = "";
+    $("extractBadge").classList.add("hidden");
     clearPersistedState();
     this.goStep(1);
   },
@@ -1787,29 +2115,36 @@ async function doUpload() {
   if (!state.items.length) { toast("No items", "err"); return; }
   if (!CONFIG.driveFolderId) { toast("driveFolderId not configured", "err"); return; }
 
-  const totalFiles = 1 + state.items.reduce((a,i)=>a+i.labels.length,0) + 1; // +1 meta.json
+  // Phase-B: bill was already uploaded at Step-1 Next; now only labels + meta.json.
+  // If Phase-A never ran (e.g. leftover from a pre-parallel state), fall back.
+  const totalLabelFiles = state.items.reduce((a,i)=>a+(i.batches?.length || 0), 0);
+  const totalFiles = totalLabelFiles + 1 /* meta.json */
+                   + (state.phaseAUploaded ? 0 : 2 /* folder + bill */);
   let done = 0;
   $("progress").classList.add("on");
   $("uploadBtn").disabled = true;
   const bar = $("progressBar");
   const log = (m) => { const el = $("uploadLog"); el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; };
-  const tick = (label) => { done++; bar.style.width = Math.round((done/totalFiles)*100) + "%"; $("progressSub").textContent = label; };
+  const tick = (label) => { done++; bar.style.width = Math.round((done/Math.max(totalFiles,1))*100) + "%"; $("progressSub").textContent = label; };
 
   try {
-    const bId = batchId();
+    let bId = state.batchId, batchFolderId = state.batchFolderId;
+    if (!state.phaseAUploaded || !batchFolderId) {
+      // Fallback path (first run on an old session) — do it all synchronously now
+      bId = batchId();
+      state.batchId = bId;
+      log("Creating batch folder: " + bId);
+      batchFolderId = await driveCreateFolder(bId, CONFIG.driveFolderId);
+      state.batchFolderId = batchFolderId;
+      const billExt = state.bill.mime.includes("pdf") ? "pdf" :
+                      state.bill.mime.includes("png") ? "png" : "jpg";
+      log("Uploading bill." + billExt + "…");
+      await driveUpload(state.bill.file, "bill." + billExt, batchFolderId);
+      tick("bill");
+      state.phaseAUploaded = true;
+    }
     $("progressTitle").textContent = "Uploading batch " + bId;
-    log("Creating batch folder: " + bId);
-
-    const batchFolderId = await driveCreateFolder(bId, CONFIG.driveFolderId);
     const labelsFolderId = await driveCreateFolder("labels", batchFolderId);
-
-    // 1. bill
-    const billExt = state.bill.mime.includes("pdf") ? "pdf" :
-                    state.bill.mime.includes("png") ? "png" : "jpg";
-    const billName = "bill." + billExt;
-    log("Uploading " + billName + "…");
-    await driveUpload(state.bill.file, billName, batchFolderId);
-    tick(billName);
 
     // 2. one photo per batch (batch[i].photo)
     const itemsMeta = [];
@@ -1861,7 +2196,10 @@ async function doUpload() {
       vendor_hint: state.vendorHint || null,
       bill_reference: state.billRef || null,
       notes: state.reviewNotes || null,
-      source: "adyah-bill-processor-web v2.1 (multi-batch + audit)",
+      phase_a_bill_uploaded_at: state.batchId ? "(see phase1.json)" : null,
+      bill_extracted_at_client: state.billExtractedAt || null,
+      bill_extraction_available: !!state.billExtracted,
+      source: "adyah-bill-processor-web v3 (parallel pipeline)",
       items: itemsMeta,
     };
     log("Uploading meta.json…");
@@ -1923,7 +2261,28 @@ window.addEventListener("DOMContentLoaded", () => {
   $("camUse").addEventListener("click", () => Camera.use());
   $("camSwitch").addEventListener("click", () => Camera.switch());
 
-  $("toStep2").addEventListener("click", () => UI.goStep(2));
+  $("toStep2").addEventListener("click", async () => {
+    // Kick off Phase-A bill upload BEFORE advancing. If it fails we stay on Step 1.
+    const btn = $("toStep2");
+    if (state.phaseAUploaded) { UI.goStep(2); return; }
+    if (state.phaseAUploading) return;
+    if (!state.token || !state.userEmail) { toast("Please sign in first", "err"); return; }
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "Uploading bill…";
+    try {
+      await phaseAUpload();
+      btn.textContent = originalText;
+      btn.disabled = false;
+      toast("Bill uploaded — Claude is extracting line items in the background", "ok");
+      UI.goStep(2);
+    } catch (e) {
+      console.error(e);
+      btn.textContent = originalText;
+      btn.disabled = false;
+      toast("Bill upload failed: " + (e.message || e), "err");
+    }
+  });
   $("toStep3").addEventListener("click", () => UI.goStep(3));
   $("toStep4").addEventListener("click", () => UI.goStep(4));
 

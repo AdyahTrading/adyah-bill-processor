@@ -1,0 +1,11 @@
+{
+  "_comment": "Adyah Bill Processor allowlist. Keys are Gmail addresses (case-insensitive). 'companies' are Odoo company_ids the user is permitted to create PO batches for: 4=Adyah Gollapalle, 5=Super Value, 6=SV Sydapuram, 10=Adyah TN, 12=SV TN. Update + commit to adyah-bill-processor repo to apply.",
+  "_last_reviewed": "2026-04-19",
+  "allowlist": {
+    "admin@adyahgroup.com":           { "name": "Adyah Admin",     "companies": [4, 5, 6, 10, 12] },
+    "ramesh.ag@adyahgroup.com":       { "name": "Ramesh (AG)",     "companies": [4] },
+    "priya.sv@adyahgroup.com":        { "name": "Priya (SV)",      "companies": [5] },
+    "kumar.syd@adyahgroup.com":       { "name": "Kumar (SYD)",     "companies": [6] },
+    "senthil.tn@adyahgroup.com":      { "name": "Senthil (TN)",    "companies": [10, 12] }
+  }
+}

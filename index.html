@@ -222,6 +222,70 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 
 .hidden { display: none !important; }
 
+/* Auth gate — full-screen before sign-in / on denial -------------------- */
+body.unauthed header.topbar,
+body.unauthed main,
+body.unauthed .scanner-indicator { display: none !important; }
+
+.auth-gate {
+  position: fixed; inset: 0; z-index: 400;
+  display: grid; place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(1200px 600px at 20% 10%, rgba(255, 77, 0, 0.12), transparent 60%),
+    radial-gradient(1000px 500px at 80% 90%, rgba(255, 123, 58, 0.10), transparent 60%),
+    var(--bg);
+}
+.auth-gate.hidden { display: none !important; }
+.gate-card {
+  width: min(460px, 100%);
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 18px;
+  padding: 34px 32px; text-align: center;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.6);
+}
+.gate-logo {
+  width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 14px;
+  background: linear-gradient(135deg, var(--flame), #ff7b3a);
+  display: grid; place-items: center; color: #fff; font-size: 30px; font-weight: 900;
+}
+.gate-card h1 { margin: 0; font-size: 22px; font-weight: 700; }
+.gate-card .gate-sub { color: var(--text-mute); margin: 6px 0 22px; font-size: 14px; line-height: 1.5; }
+.gate-card .btn.gate-signin {
+  min-width: 240px; padding: 14px 28px; font-size: 15px;
+  background: #fff; color: #1f1f1f; display: inline-flex; gap: 10px; align-items: center; justify-content: center;
+}
+.gate-card .btn.gate-signin:hover { filter: brightness(0.95); }
+.gate-card .btn.gate-signin svg { width: 20px; height: 20px; }
+.gate-card .gate-foot { font-size: 11px; color: var(--text-mute); margin-top: 22px; line-height: 1.6; }
+
+.gate-denied { margin-top: 4px; }
+.gate-denied .d-icon {
+  width: 56px; height: 56px; border-radius: 999px; margin: 0 auto 10px;
+  background: rgba(239, 68, 68, 0.15); border: 1px solid var(--err);
+  display: grid; place-items: center; color: var(--err); font-size: 26px;
+}
+.gate-denied h2 { margin: 0 0 6px; font-size: 18px; color: var(--err); }
+.gate-denied p { margin: 4px 0; font-size: 13px; color: var(--text-mute); line-height: 1.55; }
+.gate-denied .d-email {
+  display: inline-block; background: var(--bg-soft); border: 1px solid var(--line);
+  padding: 5px 10px; border-radius: 999px; font-family: ui-monospace, monospace;
+  font-size: 12px; color: var(--text); margin: 6px 0;
+}
+
+.gate-spinner {
+  width: 28px; height: 28px; border-radius: 999px;
+  border: 3px solid var(--line); border-top-color: var(--flame);
+  animation: spin 0.8s linear infinite; margin: 20px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sign-out pill in the topbar (shown after auth) */
+.signout-btn {
+  background: transparent; border: 1px solid var(--line); color: var(--text-mute);
+  padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer;
+}
+.signout-btn:hover { border-color: var(--err); color: var(--err); }
+
 /* Batch cards inside the capture panel ---------------------------------- */
 .batches-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
 .batch-card {
@@ -317,7 +381,39 @@ footer.foot {
 }
 </style>
 </head>
-<body>
+<body class="unauthed">
+
+<!-- Auth gate: shown until user signs in AND is in the allowlist -->
+<div id="authGate" class="auth-gate">
+  <div class="gate-card">
+    <div class="gate-logo">A</div>
+    <h1>Adyah Bill Processor</h1>
+
+    <div id="gateSignIn">
+      <p class="gate-sub">Authorised warehouse accounts only. Sign in with your Adyah Google account to continue.</p>
+      <button id="gateSignInBtn" class="btn gate-signin" type="button">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="gate-foot">You will authorise access to your Drive and your email address (used for the audit trail). The app only uses the shared <b>Adyah Bill Processor</b> folder.</div>
+    </div>
+
+    <div id="gateLoading" class="hidden">
+      <div class="gate-spinner"></div>
+      <div class="muted" style="font-size: 13px;" id="gateLoadingMsg">Verifying access…</div>
+    </div>
+
+    <div id="gateDenied" class="gate-denied hidden">
+      <div class="d-icon">⚠</div>
+      <h2>Access denied</h2>
+      <p>The account <span class="d-email" id="deniedEmail"></span> is not authorised for this app.</p>
+      <p>Please ask the Adyah administrator to add your address to the allowlist.</p>
+      <button id="gateSwitchBtn" class="signout-btn" style="margin-top: 14px;" type="button">
+        Sign in with a different account
+      </button>
+    </div>
+  </div>
+</div>
 
 <header class="topbar">
   <div class="brand">
@@ -332,10 +428,11 @@ footer.foot {
     <option value="10">Adyah TN</option>
     <option value="12">SV TN</option>
   </select>
-  <button id="authBtn" class="auth" type="button">
+  <div id="authBtn" class="auth on" title="Signed in">
     <span class="dot"></span>
-    <span id="authLabel">Connect Drive</span>
-  </button>
+    <span id="authLabel"></span>
+  </div>
+  <button id="signOutBtn" class="signout-btn" type="button">Sign out</button>
 </header>
 
 <main>
@@ -572,7 +669,9 @@ const CONFIG = {
   googleClientId: "531942678700-bds04dk0q3io8j219l531vseunprr3t1.apps.googleusercontent.com",
   googleApiKey:   "",        // unused — OAuth access token is sufficient for Drive v3 REST
   driveFolderId:  "1AKYVdav813wTCDhRIkSXqSdbhCRJmbAK",
-  scopes: "https://www.googleapis.com/auth/drive.file",
+  // drive.file: upload to shared folder. openid+email+profile: capture
+  // uploader identity for the audit trail stamped in meta.json.
+  scopes: "https://www.googleapis.com/auth/drive.file openid email profile",
 };
 
 /* -------------------------------------------------------------------------
@@ -588,6 +687,9 @@ const state = {
   items: [],               // { id, barcode, qty, unit, labels: [{dataUrl, mime, name}] }
   capture: null,           // in-progress item during step 2
   token: null,
+  userEmail: null,         // from Google userinfo after OAuth
+  userName: null,
+  allowedCompanies: null,  // [4, 5, ...] from users.json; null until authed
 };
 
 /* -------------------------------------------------------------------------
@@ -633,10 +735,139 @@ function dataUrlToBlob(dataUrl) {
 }
 
 /* -------------------------------------------------------------------------
- * Google Identity Services + Drive API
+ * Google Identity Services + Auth + Allowlist
+ *
+ * Flow:
+ *   1. On load, the body has class "unauthed" — the app UI is hidden and the
+ *      full-screen <div id="authGate"> is shown. Only "Sign in with Google" is
+ *      clickable.
+ *   2. User signs in. We fetch their Google profile (email, name) and look
+ *      them up in users.json (an allowlist hosted next to index.html).
+ *   3. If the email is in the allowlist, we store their permitted branches,
+ *      restrict the company selector, remove the "unauthed" class, and hide
+ *      the gate. The UI becomes usable.
+ *   4. If not, the gate swaps to "Access denied" with the user's email and a
+ *      button to try a different account.
  * ------------------------------------------------------------------------- */
 let tokenClient = null;
 let gisReady = false;
+
+const Auth = {
+  allowlist: null,   // loaded from users.json, cached
+
+  async loadAllowlist() {
+    if (this.allowlist) return this.allowlist;
+    const r = await fetch("users.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("users.json not found (HTTP " + r.status + ")");
+    const data = await r.json();
+    // Store as { lowercased-email: { name, companies } }
+    const out = {};
+    for (const [email, meta] of Object.entries(data.allowlist || {})) {
+      out[email.toLowerCase()] = meta;
+    }
+    this.allowlist = out;
+    return out;
+  },
+
+  async handleToken(accessToken) {
+    state.token = accessToken;
+    this._show("gateLoading");
+    $("gateLoadingMsg").textContent = "Verifying access…";
+
+    // 1. Who signed in?
+    try {
+      const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: "Bearer " + accessToken },
+      });
+      if (r.ok) {
+        const info = await r.json();
+        state.userEmail = info.email || null;
+        state.userName  = info.name || info.given_name || null;
+      }
+    } catch (e) {
+      console.warn("userinfo fetch failed:", e);
+    }
+
+    if (!state.userEmail) {
+      this.showDenied("(unknown — userinfo fetch failed)");
+      return;
+    }
+
+    // 2. Allowlist check
+    let list;
+    try { list = await this.loadAllowlist(); }
+    catch (e) {
+      $("gateLoadingMsg").textContent = "Allowlist unavailable — cannot verify access.";
+      toast("users.json missing — ask admin to deploy it", "err");
+      return;
+    }
+    const entry = list[state.userEmail.toLowerCase()];
+    if (!entry) {
+      this.showDenied(state.userEmail);
+      return;
+    }
+
+    // 3. Authorised!
+    state.allowedCompanies = (entry.companies || []).slice();
+    state.userName = entry.name || state.userName;
+    this.grantAccess();
+  },
+
+  grantAccess() {
+    // Restrict the company selector to permitted branches
+    const sel = $("companySelect");
+    const allowed = new Set(state.allowedCompanies);
+    let firstAllowed = null;
+    [...sel.options].forEach(o => {
+      const cid = parseInt(o.value, 10);
+      const ok = allowed.has(cid);
+      o.hidden = !ok;
+      o.disabled = !ok;
+      if (ok && firstAllowed === null) firstAllowed = o;
+    });
+    if (!firstAllowed) {
+      this.showDenied(state.userEmail + " — no branches assigned");
+      return;
+    }
+    sel.value = firstAllowed.value;
+    state.companyId = parseInt(firstAllowed.value, 10);
+    state.companyLabel = firstAllowed.textContent;
+    if (allowed.size === 1) {
+      sel.disabled = true;
+      sel.title = "Your account is restricted to " + state.companyLabel;
+    }
+
+    // Reveal the app
+    $("authLabel").textContent = state.userEmail;
+    $("authBtn").title = state.userName
+      ? `Signed in as ${state.userName} (${state.userEmail})`
+      : state.userEmail;
+    document.body.classList.remove("unauthed");
+    $("authGate").classList.add("hidden");
+    toast("Signed in as " + state.userEmail, "ok");
+  },
+
+  showDenied(email) {
+    $("deniedEmail").textContent = email;
+    this._show("gateDenied");
+  },
+
+  _show(which) {
+    for (const id of ["gateSignIn", "gateLoading", "gateDenied"]) {
+      const el = $(id);
+      if (el) el.classList.toggle("hidden", id !== which);
+    }
+  },
+
+  signOut() {
+    const finish = () => { state.token = null; state.userEmail = null; location.reload(); };
+    if (state.token && window.google && google.accounts) {
+      try { google.accounts.oauth2.revoke(state.token, finish); return; }
+      catch (e) { /* fall through */ }
+    }
+    finish();
+  },
+};
 
 function initGIS() {
   if (!CONFIG.googleClientId || !CONFIG.driveFolderId) {
@@ -650,15 +881,12 @@ function initGIS() {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CONFIG.googleClientId,
       scope: CONFIG.scopes,
-      callback: (resp) => {
+      callback: async (resp) => {
         if (resp && resp.access_token) {
-          state.token = resp.access_token;
-          const btn = $("authBtn");
-          btn.classList.add("on");
-          $("authLabel").textContent = "Drive connected";
-          toast("Signed in to Google Drive", "ok");
+          await Auth.handleToken(resp.access_token);
         } else if (resp && resp.error) {
           toast("Auth error: " + resp.error, "err");
+          Auth._show("gateSignIn");
         }
       },
     });
@@ -1358,7 +1586,10 @@ const UI = {
  * Upload orchestration
  * ------------------------------------------------------------------------- */
 async function doUpload() {
-  if (!state.token) { toast("Sign in to Google Drive first", "err"); signIn(); return; }
+  if (!state.token || !state.userEmail) { toast("Session expired — please sign in again", "err"); Auth.signOut(); return; }
+  if (!state.allowedCompanies || !state.allowedCompanies.includes(state.companyId)) {
+    toast("Your account is not authorised for the selected branch.", "err"); return;
+  }
   if (!state.bill) { toast("No bill", "err"); return; }
   if (!state.items.length) { toast("No items", "err"); return; }
   if (!CONFIG.driveFolderId) { toast("driveFolderId not configured", "err"); return; }
@@ -1427,12 +1658,14 @@ async function doUpload() {
     const meta = {
       batch_id: bId,
       created_at: new Date().toISOString(),
+      uploaded_by_email: state.userEmail,
+      uploaded_by_name:  state.userName,
       company_id: state.companyId,
       company_label: state.companyLabel,
       vendor_hint: state.vendorHint || null,
       bill_reference: state.billRef || null,
       notes: state.reviewNotes || null,
-      source: "adyah-bill-processor-web v2 (multi-batch)",
+      source: "adyah-bill-processor-web v2.1 (multi-batch + audit)",
       items: itemsMeta,
     };
     log("Uploading meta.json…");
@@ -1473,7 +1706,11 @@ window.addEventListener("DOMContentLoaded", () => {
   $("billRef").addEventListener("input", (e) => state.billRef = e.target.value.trim());
   $("reviewNotes").addEventListener("input", (e) => state.reviewNotes = e.target.value.trim());
 
-  $("authBtn").addEventListener("click", signIn);
+  $("gateSignInBtn").addEventListener("click", signIn);
+  $("gateSwitchBtn").addEventListener("click", () => Auth.signOut());
+  $("signOutBtn").addEventListener("click", () => {
+    if (confirm("Sign out of the bill processor?")) Auth.signOut();
+  });
 
   $("billCameraBtn").addEventListener("click", () => Camera.open("bill"));
   $("billCameraFallback").addEventListener("change", (e) => { UI.handleBillFile(e.target.files[0]); e.target.value = ""; });

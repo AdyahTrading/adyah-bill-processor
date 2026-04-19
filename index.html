@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Adyah Bill Processor</title>
+<link rel="preconnect" href="https://accounts.google.com">
+<link rel="preconnect" href="https://www.googleapis.com">
+<style>
+:root {
+  --flame: #FF4D00;
+  --flame-dim: #cc3d00;
+  --bg: #0b0d10;
+  --bg-card: #151921;
+  --bg-soft: #1d2230;
+  --line: #2a3142;
+  --text: #e9edf5;
+  --text-mute: #8891a6;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --radius: 14px;
+  --pad: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; }
+body { min-height: 100dvh; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+header.topbar {
+  position: sticky; top: 0; z-index: 20; background: #0b0d10f2;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+header .brand {
+  display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.3px;
+}
+header .brand .logo {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--flame), #ff7b3a);
+  display: grid; place-items: center; color: #fff; font-weight: 900;
+}
+header .spacer { flex: 1; }
+header select, header .auth {
+  background: var(--bg-card); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 12px; font-size: 14px;
+}
+header .auth {
+  cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+header .auth.on { border-color: var(--ok); }
+header .auth .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--text-mute); }
+header .auth.on .dot { background: var(--ok); }
+
+main { max-width: 1080px; margin: 0 auto; padding: 18px 16px 120px; }
+
+.stepper {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px;
+}
+.step {
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px; opacity: 0.55;
+}
+.step.active { opacity: 1; border-color: var(--flame); box-shadow: 0 0 0 1px var(--flame) inset; }
+.step.done { opacity: 1; border-color: #2d6a4f; background: linear-gradient(180deg, #10261d, var(--bg-card)); }
+.step .n { width: 26px; height: 26px; border-radius: 999px;
+  background: var(--bg-soft); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.step.active .n { background: var(--flame); color: #fff; }
+.step.done .n { background: var(--ok); color: #04160d; }
+.step .lbl { font-size: 13px; }
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 14px;
+}
+.card h2 { margin: 0 0 12px; font-size: 18px; font-weight: 700; }
+.card .hint { color: var(--text-mute); font-size: 13px; margin-bottom: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  background: var(--flame); color: #fff; border: 0;
+  padding: 12px 18px; border-radius: 10px; font-weight: 700; cursor: pointer;
+  min-height: 44px; /* mobile tap target */
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+.btn.ghost:hover { border-color: var(--flame); }
+.btn.secondary { background: var(--bg-soft); color: var(--text); border: 1px solid var(--line); }
+.btn.danger { background: var(--err); }
+.btn.small { padding: 8px 12px; font-size: 13px; min-height: 36px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.row.between { justify-content: space-between; align-items: center; }
+
+input[type="text"], input[type="number"], textarea, select.form {
+  width: 100%; background: var(--bg-soft); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 15px;
+}
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+  outline: 2px solid var(--flame); outline-offset: 1px; border-color: var(--flame);
+}
+.label { display: block; font-size: 13px; color: var(--text-mute); margin-bottom: 6px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+.photo-preview { margin-top: 12px; }
+.photo-preview img { max-width: 100%; max-height: 320px; border-radius: 10px; border: 1px solid var(--line); }
+.file-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--bg-soft); border: 1px dashed var(--line); color: var(--text);
+  padding: 16px 20px; border-radius: 12px; cursor: pointer;
+  min-height: 56px; font-weight: 600;
+}
+.file-btn:hover { border-color: var(--flame); color: var(--flame); }
+.file-btn input { display: none; }
+
+.scan-input {
+  width: 100%; background: var(--bg-soft); border: 2px solid var(--flame);
+  color: var(--text); padding: 18px 20px; border-radius: 12px;
+  font-size: 18px; font-family: ui-monospace, monospace; letter-spacing: 1px;
+}
+.scan-input::placeholder { color: var(--text-mute); font-family: inherit; letter-spacing: normal; }
+
+.items-list { display: flex; flex-direction: column; gap: 10px; }
+.item {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 12px; padding: 12px; display: grid;
+  grid-template-columns: 80px 1fr auto; gap: 12px; align-items: center;
+}
+.item .thumbs { display: flex; gap: 4px; flex-wrap: wrap; }
+.item .thumbs img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.item .meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.item .meta .bc { font-family: ui-monospace, monospace; font-weight: 700; color: var(--flame); font-size: 15px; }
+.item .meta .sub { color: var(--text-mute); font-size: 12px; }
+.item .qty {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 10px; padding: 4px;
+}
+.item .qty button { background: transparent; border: 0; color: var(--text); width: 28px; height: 28px; font-size: 18px; cursor: pointer; border-radius: 6px; }
+.item .qty button:hover { background: var(--line); }
+.item .qty input { width: 54px; background: transparent; border: 0; text-align: center; font-size: 15px; }
+.item .actions { display: flex; gap: 6px; }
+.item.removing { opacity: 0.4; }
+
+.toast-zone {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 8px; z-index: 100;
+  width: min(92vw, 520px);
+}
+.toast {
+  background: var(--bg-card); border: 1px solid var(--line); border-left: 4px solid var(--flame);
+  padding: 12px 14px; border-radius: 10px; font-size: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+}
+.toast.ok { border-left-color: var(--ok); }
+.toast.err { border-left-color: var(--err); }
+
+.progress {
+  position: fixed; inset: 0; background: #000000b5; display: none;
+  place-items: center; z-index: 200;
+}
+.progress.on { display: grid; }
+.progress .box {
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 22px 26px; min-width: 280px; max-width: 400px;
+}
+.progress .bar { height: 8px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+.progress .bar > div { height: 100%; background: var(--flame); width: 0%; transition: width 0.25s; }
+
+.summary { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--bg-soft); border: 1px solid var(--line); padding: 6px 10px; border-radius: 999px; font-size: 13px; }
+.chip.ok { border-color: var(--ok); color: var(--ok); }
+.chip.warn { border-color: var(--warn); color: var(--warn); }
+
+.scanner-indicator {
+  position: fixed; bottom: 16px; right: 16px; z-index: 50;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-card); border: 1px solid var(--line);
+  padding: 8px 12px; border-radius: 999px; font-size: 12px; color: var(--text-mute);
+}
+.scanner-indicator .dot {
+  width: 8px; height: 8px; border-radius: 999px; background: var(--text-mute);
+}
+.scanner-indicator.ready .dot { background: var(--ok); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.hidden { display: none !important; }
+
+.nav-btns { display: flex; gap: 10px; justify-content: space-between; margin-top: 14px; }
+.muted { color: var(--text-mute); }
+.center { text-align: center; }
+
+.config-warn {
+  background: #2a1f10; border: 1px solid #7a4a10; color: #f9d48a;
+  padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; line-height: 1.5;
+}
+
+footer.foot {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #0b0d10e8; backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+  padding: 10px 16px; display: flex; gap: 10px; justify-content: flex-end;
+  z-index: 15;
+}
+@media (max-width: 640px) {
+  .stepper { grid-template-columns: repeat(2, 1fr); }
+  main { padding-bottom: 180px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">A</div>
+    <div>Adyah Bill Processor</div>
+  </div>
+  <div class="spacer"></div>
+  <select id="companySelect" title="Branch">
+    <option value="4" selected>Adyah Gollapalle</option>
+    <option value="5">Super Value</option>
+    <option value="6">SV Sydapuram</option>
+    <option value="10">Adyah TN</option>
+    <option value="12">SV TN</option>
+  </select>
+  <button id="authBtn" class="auth" type="button">
+    <span class="dot"></span>
+    <span id="authLabel">Connect Drive</span>
+  </button>
+</header>
+
+<main>
+  <div id="configWarn" class="config-warn hidden">
+    <b>One-time setup:</b> open this file in a text editor and fill in
+    <code>CONFIG.googleClientId</code>, <code>CONFIG.googleApiKey</code>, and
+    <code>CONFIG.driveFolderId</code>. See the comment at the top of the
+    <code>&lt;script&gt;</code> block for instructions.
+  </div>
+
+  <div class="stepper" id="stepper">
+    <div class="step active" data-step="1"><div class="n">1</div><div class="lbl">Scan bill</div></div>
+    <div class="step" data-step="2"><div class="n">2</div><div class="lbl">Scan products</div></div>
+    <div class="step" data-step="3"><div class="n">3</div><div class="lbl">Review</div></div>
+    <div class="step" data-step="4"><div class="n">4</div><div class="lbl">Upload</div></div>
+  </div>
+
+  <!-- STEP 1: BILL -->
+  <section id="step1" class="step-panel">
+    <div class="card">
+      <h2>Step 1 — Scan vendor bill</h2>
+      <p class="hint">Capture or upload the full vendor bill (PDF, JPG, or PNG). The warehouse PC reads it with vision to extract line items, taxes and totals.</p>
+
+      <div class="grid2">
+        <div>
+          <label class="label">Vendor hint (optional)</label>
+          <input type="text" id="vendorHint" placeholder="e.g. ITC Foods, Britannia" autocomplete="off" />
+        </div>
+        <div>
+          <label class="label">Bill reference (optional)</label>
+          <input type="text" id="billRef" placeholder="Invoice / bill number" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 14px;">
+        <label class="file-btn">
+          📸 Photograph bill
+          <input type="file" accept="image/*" capture="environment" id="billCamera" />
+        </label>
+        <label class="file-btn">
+          📄 Upload file (PDF/image)
+          <input type="file" accept="image/*,application/pdf" id="billUpload" />
+        </label>
+      </div>
+
+      <div id="billPreview" class="photo-preview"></div>
+      <div class="nav-btns">
+        <div></div>
+        <button id="toStep2" class="btn" disabled>Next · Scan products →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: PRODUCTS -->
+  <section id="step2" class="step-panel hidden">
+    <div class="card">
+      <h2>Step 2 — Scan products</h2>
+      <p class="hint">Scan the barcode with the Bluetooth scanner, then capture one photo of the label showing <b>batch number</b>, <b>manufacturing / expiry date</b>, and <b>MRP</b>. Enter the received quantity. Repeat for every item on the bill.</p>
+
+      <label class="label">Scan barcode <span class="muted">(scanner types here automatically)</span></label>
+      <input type="text" id="barcodeInput" class="scan-input"
+             placeholder="Waiting for scanner…" inputmode="none" autocomplete="off" />
+
+      <div id="capturePanel" class="hidden" style="margin-top: 14px;">
+        <div class="card" style="margin: 0; background: var(--bg-soft);">
+          <div class="row between">
+            <div><b id="capBarcode" style="font-family: ui-monospace, monospace; color: var(--flame); font-size: 16px;"></b>
+              <div class="muted" style="font-size: 12px;" id="capStatus">Capture label photo(s)</div>
+            </div>
+            <button id="cancelCapture" class="btn ghost small">Cancel</button>
+          </div>
+
+          <div class="row" style="margin-top: 12px;">
+            <label class="file-btn">
+              📸 Capture label
+              <input type="file" accept="image/*" capture="environment" id="labelCamera" />
+            </label>
+            <label class="file-btn">
+              🖼️ Upload photo
+              <input type="file" accept="image/*" id="labelUpload" />
+            </label>
+          </div>
+
+          <div id="labelThumbs" class="row" style="margin-top: 10px;"></div>
+
+          <div class="grid2" style="margin-top: 14px;">
+            <div>
+              <label class="label">Received qty</label>
+              <input type="number" id="receivedQty" min="0" step="any" value="1" />
+            </div>
+            <div>
+              <label class="label">Unit (optional)</label>
+              <input type="text" id="unitHint" placeholder="pcs / kg / case" />
+            </div>
+          </div>
+
+          <div class="nav-btns">
+            <button id="saveItem" class="btn" disabled>Save &amp; next item</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin: 20px 0 10px; font-size: 15px;">Scanned items (<span id="itemCount">0</span>)</h3>
+      <div id="itemsList" class="items-list"></div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn ghost" onclick="UI.goStep(1)">← Back</button>
+      <button id="toStep3" class="btn" disabled>Next · Review →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: REVIEW -->
+  <section id="step3" class="step-panel hidden">
+    <div class="card">
+      <h2>Step 3 — Review &amp; confirm</h2>
+      <p class="hint">Double-check each item before uploading. Any adjustments here stay with the batch.</p>
+
+      <div class="grid2">
+        <div>
+          <div class="label">Branch</div>
+          <div id="rvCompany" style="font-weight: 700;"></div>
+        </div>
+        <div>
+          <div class="label">Vendor hint</div>
+          <div id="rvVendor"></div>
+        </div>
+        <div>
+          <div class="label">Bill reference</div>
+          <div id="rvRef"></div>
+        </div>
+        <div>
+          <div class="label">Bill file</div>
+          <div id="rvBill"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <label class="label">Warehouse notes (optional)</label>
+        <textarea id="reviewNotes" rows="3" placeholder="Quantity mismatch, damage, vendor followup reasons…"></textarea>
+      </div>
+
+      <h3 style="margin: 18px 0 8px; font-size: 15px;">Items (<span id="rvItemCount">0</span>)</h3>
+      <div id="rvItems" class="items-list"></div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn ghost" onclick="UI.goStep(2)">← Back</button>
+      <button id="toStep4" class="btn">Next · Upload batch →</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: UPLOAD -->
+  <section id="step4" class="step-panel hidden">
+    <div class="card">
+      <h2>Step 4 — Upload to Drive</h2>
+      <p class="hint">Uploads the bill and all label photos to the <code>Adyah Bill Processor / pending / </code> folder. Your PC picks them up automatically via Drive for Desktop and the warehouse team runs <code>/process-vendor-bill</code> on Claude Code to create the draft PO in Odoo.</p>
+
+      <div class="summary" id="uploadSummary"></div>
+      <div id="uploadLog" class="muted" style="font-size: 12px; margin-top: 12px; font-family: ui-monospace, monospace; white-space: pre-wrap;"></div>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn ghost" onclick="UI.goStep(3)">← Back</button>
+      <div style="display: flex; gap: 10px;">
+        <button id="uploadBtn" class="btn">☁️ Upload batch</button>
+        <button id="newBatchBtn" class="btn secondary hidden">✨ Start new batch</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="scanner-indicator" id="scannerIndicator">
+  <span class="dot"></span>
+  <span>Scanner idle</span>
+</div>
+
+<div class="toast-zone" id="toastZone"></div>
+
+<div class="progress" id="progress">
+  <div class="box">
+    <div style="font-weight: 700;" id="progressTitle">Uploading…</div>
+    <div class="muted" style="font-size: 13px; margin-top: 4px;" id="progressSub"></div>
+    <div class="bar"><div id="progressBar"></div></div>
+  </div>
+</div>
+
+<script>
+/* -------------------------------------------------------------------------
+ * CONFIG — fill these in once, then save the file.
+ *
+ * 1. googleClientId:
+ *    Google Cloud Console → APIs & Services → Credentials → Create OAuth
+ *    2.0 Client ID → Web application. Add this page's URL (and http://localhost
+ *    if testing locally) as an Authorized JavaScript origin. Paste the
+ *    resulting Client ID here (ends with ".apps.googleusercontent.com").
+ *
+ * 2. googleApiKey:
+ *    Same project → Create API Key. Restrict to the Drive API for safety.
+ *
+ * 3. driveFolderId:
+ *    Open the "Adyah Bill Processor/pending" folder in Google Drive in a
+ *    browser. The URL looks like
+ *      https://drive.google.com/drive/folders/<FOLDER_ID>
+ *    Paste <FOLDER_ID> here.
+ *
+ * 4. Enable the Drive API in APIs & Services → Library.
+ * ------------------------------------------------------------------------- */
+const CONFIG = {
+  // Google Cloud project: adyah-bill-processor
+  googleClientId: "531942678700-bds04dk0q3io8j219l531vseunprr3t1.apps.googleusercontent.com",
+  googleApiKey:   "",        // unused — OAuth access token is sufficient for Drive v3 REST
+  driveFolderId:  "1AKYVdav813wTCDhRIkSXqSdbhCRJmbAK",
+  scopes: "https://www.googleapis.com/auth/drive.file",
+};
+
+/* -------------------------------------------------------------------------
+ * State
+ * ------------------------------------------------------------------------- */
+const state = {
+  companyId: 4,
+  companyLabel: "Adyah Gollapalle",
+  vendorHint: "",
+  billRef: "",
+  reviewNotes: "",
+  bill: null,              // { file: File|Blob, dataUrl, name, mime }
+  items: [],               // { id, barcode, qty, unit, labels: [{dataUrl, mime, name}] }
+  capture: null,           // in-progress item during step 2
+  token: null,
+};
+
+/* -------------------------------------------------------------------------
+ * Utilities
+ * ------------------------------------------------------------------------- */
+const $ = (id) => document.getElementById(id);
+function toast(msg, kind = "") {
+  const t = document.createElement("div");
+  t.className = "toast " + kind;
+  t.textContent = msg;
+  $("toastZone").appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+function fmtDate(d = new Date()) {
+  return d.toISOString().slice(0, 19).replace("T", "_").replace(/:/g, "-");
+}
+function batchId() {
+  const d = new Date();
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"),
+        da = String(d.getDate()).padStart(2,"0"),
+        h = String(d.getHours()).padStart(2,"0"),
+        mi = String(d.getMinutes()).padStart(2,"0"),
+        s = String(d.getSeconds()).padStart(2,"0"),
+        rand = Math.random().toString(36).slice(2, 6);
+  return `${y}${m}${da}-${h}${mi}${s}-${rand}`;
+}
+function slug(s) { return String(s || "").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60) || "x"; }
+function readAsDataURL(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(file);
+  });
+}
+function dataUrlToBlob(dataUrl) {
+  const [meta, b64] = dataUrl.split(",");
+  const mime = (meta.match(/data:(.*?);base64/) || [,"application/octet-stream"])[1];
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], { type: mime });
+}
+
+/* -------------------------------------------------------------------------
+ * Google Identity Services + Drive API
+ * ------------------------------------------------------------------------- */
+let tokenClient = null;
+let gisReady = false;
+
+function initGIS() {
+  if (!CONFIG.googleClientId || !CONFIG.driveFolderId) {
+    $("configWarn").classList.remove("hidden");
+    return;
+  }
+  const s = document.createElement("script");
+  s.src = "https://accounts.google.com/gsi/client";
+  s.async = true; s.defer = true;
+  s.onload = () => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.googleClientId,
+      scope: CONFIG.scopes,
+      callback: (resp) => {
+        if (resp && resp.access_token) {
+          state.token = resp.access_token;
+          const btn = $("authBtn");
+          btn.classList.add("on");
+          $("authLabel").textContent = "Drive connected";
+          toast("Signed in to Google Drive", "ok");
+        } else if (resp && resp.error) {
+          toast("Auth error: " + resp.error, "err");
+        }
+      },
+    });
+    gisReady = true;
+  };
+  s.onerror = () => toast("Failed to load Google Identity Services", "err");
+  document.head.appendChild(s);
+}
+
+function signIn() {
+  if (!gisReady || !tokenClient) {
+    toast("Config missing — set googleClientId in the file", "err");
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: state.token ? "" : "consent" });
+}
+
+async function driveCreateFolder(name, parentId) {
+  const r = await fetch("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + state.token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name, mimeType: "application/vnd.google-apps.folder", parents: [parentId],
+    }),
+  });
+  if (!r.ok) throw new Error("Drive folder create failed: " + r.status + " " + await r.text());
+  const j = await r.json();
+  return j.id;
+}
+
+async function driveUpload(blob, filename, parentId) {
+  const meta = { name: filename, parents: [parentId] };
+  const boundary = "-----adyah-" + Math.random().toString(36).slice(2);
+  const closeDelim = "\r\n--" + boundary + "--";
+  const header = "--" + boundary + "\r\n" +
+                 "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+                 JSON.stringify(meta) + "\r\n" +
+                 "--" + boundary + "\r\n" +
+                 "Content-Type: " + (blob.type || "application/octet-stream") + "\r\n\r\n";
+  const headerBlob = new Blob([header], { type: "text/plain" });
+  const closeBlob = new Blob([closeDelim], { type: "text/plain" });
+  const body = new Blob([headerBlob, blob, closeBlob]);
+  const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + state.token,
+      "Content-Type": "multipart/related; boundary=" + boundary,
+    },
+    body,
+  });
+  if (!r.ok) throw new Error("Drive upload failed: " + r.status + " " + await r.text());
+  return r.json();
+}
+
+/* -------------------------------------------------------------------------
+ * Scanner — Bluetooth HID scanners behave as a keyboard.
+ * We keep barcodeInput focused on step 2, and treat Enter as "scan complete".
+ * ------------------------------------------------------------------------- */
+const Scanner = {
+  buffer: "",
+  lastKey: 0,
+  attach() {
+    const ind = $("scannerIndicator");
+    const input = $("barcodeInput");
+    const focusIt = () => { if (UI.currentStep === 2 && !state.capture) input.focus(); };
+    document.addEventListener("click", focusIt);
+    document.addEventListener("keydown", () => { ind.classList.add("ready"); });
+    input.addEventListener("focus", () => { ind.classList.add("ready"); ind.querySelector("span:last-child").textContent = "Scanner ready"; });
+    input.addEventListener("blur", () => { ind.classList.remove("ready"); ind.querySelector("span:last-child").textContent = "Scanner idle"; });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const code = input.value.trim();
+        input.value = "";
+        if (code) Scanner.onScan(code);
+      }
+    });
+    setTimeout(focusIt, 50);
+  },
+  onScan(code) {
+    if (state.items.some(i => i.barcode === code)) {
+      if (!confirm("Barcode " + code + " already in this batch. Add another entry?")) {
+        return;
+      }
+    }
+    UI.beginCapture(code);
+  },
+};
+
+/* -------------------------------------------------------------------------
+ * UI controller
+ * ------------------------------------------------------------------------- */
+const UI = {
+  currentStep: 1,
+
+  goStep(n) {
+    if (n === 2 && !state.bill) { toast("Capture the bill first", "err"); return; }
+    if (n === 3 && state.items.length === 0) { toast("Scan at least one product", "err"); return; }
+    this.currentStep = n;
+    document.querySelectorAll(".step-panel").forEach((p, i) => {
+      p.classList.toggle("hidden", (i + 1) !== n);
+    });
+    document.querySelectorAll(".stepper .step").forEach((el) => {
+      const s = +el.dataset.step;
+      el.classList.toggle("active", s === n);
+      el.classList.toggle("done", s < n);
+    });
+    if (n === 3) this.renderReview();
+    if (n === 4) this.renderUploadSummary();
+    if (n === 2) { setTimeout(() => $("barcodeInput").focus(), 50); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  },
+
+  async handleBillFile(file) {
+    if (!file) return;
+    const mime = file.type || "application/octet-stream";
+    let dataUrl;
+    try {
+      dataUrl = await readAsDataURL(file);
+    } catch {
+      toast("Failed to read file", "err"); return;
+    }
+    state.bill = { file, dataUrl, mime, name: file.name || ("bill." + (mime.includes("pdf") ? "pdf" : "jpg")) };
+    const box = $("billPreview");
+    box.innerHTML = "";
+    if (mime.startsWith("image/")) {
+      const img = new Image(); img.src = dataUrl;
+      box.appendChild(img);
+    } else {
+      const p = document.createElement("div");
+      p.className = "chip";
+      p.textContent = "📄 " + state.bill.name + "  (" + Math.round(file.size/1024) + " KB)";
+      box.appendChild(p);
+    }
+    $("toStep2").disabled = false;
+    toast("Bill captured", "ok");
+  },
+
+  beginCapture(barcode) {
+    state.capture = { id: crypto.randomUUID(), barcode, qty: 1, unit: "", labels: [] };
+    $("capBarcode").textContent = barcode;
+    $("capStatus").textContent = "Capture label photo(s)";
+    $("labelThumbs").innerHTML = "";
+    $("receivedQty").value = "1";
+    $("unitHint").value = "";
+    $("capturePanel").classList.remove("hidden");
+    $("saveItem").disabled = true;
+    $("barcodeInput").blur();
+  },
+
+  async addLabelPhoto(file) {
+    if (!state.capture || !file) return;
+    const dataUrl = await readAsDataURL(file);
+    const name = `label_${state.capture.labels.length + 1}.${(file.type.split("/")[1] || "jpg").split(";")[0]}`;
+    state.capture.labels.push({ dataUrl, mime: file.type || "image/jpeg", name });
+    const th = document.createElement("img");
+    th.src = dataUrl;
+    th.style.cssText = "width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);";
+    $("labelThumbs").appendChild(th);
+    $("saveItem").disabled = false;
+    $("capStatus").textContent = state.capture.labels.length + " label photo" + (state.capture.labels.length > 1 ? "s" : "") + " captured — you can add more or save";
+  },
+
+  saveCapture() {
+    if (!state.capture) return;
+    const qty = parseFloat($("receivedQty").value || "0");
+    if (!qty || qty <= 0) { toast("Enter a positive quantity", "err"); return; }
+    state.capture.qty = qty;
+    state.capture.unit = $("unitHint").value.trim();
+    state.items.push(state.capture);
+    state.capture = null;
+    $("capturePanel").classList.add("hidden");
+    this.renderItems();
+    $("toStep3").disabled = state.items.length === 0;
+    toast("Item saved", "ok");
+    setTimeout(() => $("barcodeInput").focus(), 50);
+  },
+
+  cancelCapture() {
+    state.capture = null;
+    $("capturePanel").classList.add("hidden");
+    setTimeout(() => $("barcodeInput").focus(), 50);
+  },
+
+  renderItems() {
+    const list = $("itemsList");
+    list.innerHTML = "";
+    $("itemCount").textContent = state.items.length;
+    state.items.forEach((it, idx) => {
+      const row = document.createElement("div");
+      row.className = "item";
+      const thumbs = document.createElement("div");
+      thumbs.className = "thumbs";
+      it.labels.forEach(l => { const img = new Image(); img.src = l.dataUrl; thumbs.appendChild(img); });
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `<div class="bc">${it.barcode}</div>
+                        <div class="sub">${it.labels.length} photo${it.labels.length>1?"s":""}${it.unit ? " · " + it.unit : ""}</div>`;
+      const qty = document.createElement("div");
+      qty.className = "qty";
+      qty.innerHTML = `<button data-a="-">−</button>
+                       <input type="number" value="${it.qty}" step="any" min="0" />
+                       <button data-a="+">+</button>`;
+      qty.querySelector("[data-a='-']").onclick = () => { it.qty = Math.max(0, (+qty.querySelector("input").value || 0) - 1); qty.querySelector("input").value = it.qty; };
+      qty.querySelector("[data-a='+']").onclick = () => { it.qty = (+qty.querySelector("input").value || 0) + 1; qty.querySelector("input").value = it.qty; };
+      qty.querySelector("input").oninput = (e) => { it.qty = parseFloat(e.target.value) || 0; };
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const del = document.createElement("button"); del.className = "btn ghost small"; del.textContent = "Remove";
+      del.onclick = () => {
+        if (!confirm("Remove " + it.barcode + "?")) return;
+        state.items.splice(idx, 1);
+        this.renderItems();
+        $("toStep3").disabled = state.items.length === 0;
+      };
+      actions.appendChild(del);
+      row.appendChild(thumbs);
+      row.appendChild(meta);
+      row.appendChild(qty);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+  },
+
+  renderReview() {
+    $("rvCompany").textContent = state.companyLabel;
+    $("rvVendor").textContent = state.vendorHint || "—";
+    $("rvRef").textContent = state.billRef || "—";
+    $("rvBill").textContent = state.bill ? state.bill.name : "—";
+    $("rvItemCount").textContent = state.items.length;
+    const list = $("rvItems");
+    list.innerHTML = "";
+    state.items.forEach((it) => {
+      const row = document.createElement("div");
+      row.className = "item";
+      const thumbs = document.createElement("div");
+      thumbs.className = "thumbs";
+      it.labels.forEach(l => { const img = new Image(); img.src = l.dataUrl; thumbs.appendChild(img); });
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `<div class="bc">${it.barcode}</div>
+                        <div class="sub">Qty ${it.qty}${it.unit ? " " + it.unit : ""} · ${it.labels.length} photo${it.labels.length>1?"s":""}</div>`;
+      row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
+      list.appendChild(row);
+    });
+  },
+
+  renderUploadSummary() {
+    const s = $("uploadSummary");
+    s.innerHTML = "";
+    const items = [
+      { label: `Branch · ${state.companyLabel}`, cls: "ok" },
+      { label: `${state.items.length} item${state.items.length === 1 ? "" : "s"}`, cls: "ok" },
+      { label: `${state.items.reduce((a,i)=>a+i.labels.length,0)} label photos`, cls: "" },
+      { label: state.bill ? ("Bill · " + state.bill.name) : "No bill", cls: state.bill ? "ok" : "warn" },
+    ];
+    if (state.vendorHint) items.push({ label: "Vendor · " + state.vendorHint, cls: "" });
+    if (state.billRef)    items.push({ label: "Ref · " + state.billRef, cls: "" });
+    items.forEach(x => {
+      const c = document.createElement("div");
+      c.className = "chip " + x.cls;
+      c.textContent = x.label;
+      s.appendChild(c);
+    });
+  },
+
+  resetAll() {
+    state.vendorHint = ""; state.billRef = ""; state.reviewNotes = "";
+    state.bill = null; state.items = []; state.capture = null;
+    $("vendorHint").value = ""; $("billRef").value = ""; $("reviewNotes").value = "";
+    $("billPreview").innerHTML = ""; $("itemsList").innerHTML = "";
+    $("toStep2").disabled = true; $("toStep3").disabled = true;
+    $("newBatchBtn").classList.add("hidden");
+    $("uploadBtn").disabled = false;
+    $("uploadLog").textContent = "";
+    this.goStep(1);
+  },
+};
+
+/* -------------------------------------------------------------------------
+ * Upload orchestration
+ * ------------------------------------------------------------------------- */
+async function doUpload() {
+  if (!state.token) { toast("Sign in to Google Drive first", "err"); signIn(); return; }
+  if (!state.bill) { toast("No bill", "err"); return; }
+  if (!state.items.length) { toast("No items", "err"); return; }
+  if (!CONFIG.driveFolderId) { toast("driveFolderId not configured", "err"); return; }
+
+  const totalFiles = 1 + state.items.reduce((a,i)=>a+i.labels.length,0) + 1; // +1 meta.json
+  let done = 0;
+  $("progress").classList.add("on");
+  $("uploadBtn").disabled = true;
+  const bar = $("progressBar");
+  const log = (m) => { const el = $("uploadLog"); el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; };
+  const tick = (label) => { done++; bar.style.width = Math.round((done/totalFiles)*100) + "%"; $("progressSub").textContent = label; };
+
+  try {
+    const bId = batchId();
+    $("progressTitle").textContent = "Uploading batch " + bId;
+    log("Creating batch folder: " + bId);
+
+    const batchFolderId = await driveCreateFolder(bId, CONFIG.driveFolderId);
+    const labelsFolderId = await driveCreateFolder("labels", batchFolderId);
+
+    // 1. bill
+    const billExt = state.bill.mime.includes("pdf") ? "pdf" :
+                    state.bill.mime.includes("png") ? "png" : "jpg";
+    const billName = "bill." + billExt;
+    log("Uploading " + billName + "…");
+    await driveUpload(state.bill.file, billName, batchFolderId);
+    tick(billName);
+
+    // 2. each label photo
+    for (const it of state.items) {
+      let i = 0;
+      for (const l of it.labels) {
+        i++;
+        const fn = `${slug(it.barcode)}_${String(i).padStart(2,"0")}.${(l.mime.split("/")[1] || "jpg").split(";")[0]}`;
+        log("Uploading " + fn + "…");
+        const blob = dataUrlToBlob(l.dataUrl);
+        await driveUpload(blob, fn, labelsFolderId);
+        tick(fn);
+      }
+    }
+
+    // 3. meta.json
+    const meta = {
+      batch_id: bId,
+      created_at: new Date().toISOString(),
+      company_id: state.companyId,
+      company_label: state.companyLabel,
+      vendor_hint: state.vendorHint || null,
+      bill_reference: state.billRef || null,
+      notes: state.reviewNotes || null,
+      source: "adyah-bill-processor-web v1",
+      items: state.items.map(it => ({
+        barcode: it.barcode,
+        received_qty: it.qty,
+        unit: it.unit || null,
+        label_files: it.labels.map((_, i) =>
+          `${slug(it.barcode)}_${String(i+1).padStart(2,"0")}.jpg`),
+      })),
+    };
+    log("Uploading meta.json…");
+    const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: "application/json" });
+    await driveUpload(metaBlob, "meta.json", batchFolderId);
+    tick("meta.json");
+
+    $("progressTitle").textContent = "Upload complete";
+    $("progressSub").textContent = "Batch " + bId + " uploaded to Drive.";
+    toast("Batch " + bId + " uploaded ✅", "ok");
+    log("Done. Run /process-vendor-bill on the warehouse PC.");
+    $("newBatchBtn").classList.remove("hidden");
+  } catch (e) {
+    console.error(e);
+    $("progressTitle").textContent = "Upload failed";
+    $("progressSub").textContent = e.message || String(e);
+    toast("Upload failed: " + (e.message || e), "err");
+    $("uploadBtn").disabled = false;
+  } finally {
+    setTimeout(() => $("progress").classList.remove("on"), 1500);
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Wire everything up
+ * ------------------------------------------------------------------------- */
+window.addEventListener("DOMContentLoaded", () => {
+  initGIS();
+  Scanner.attach();
+
+  $("companySelect").addEventListener("change", (e) => {
+    state.companyId = parseInt(e.target.value, 10);
+    state.companyLabel = e.target.options[e.target.selectedIndex].textContent;
+  });
+  $("vendorHint").addEventListener("input", (e) => state.vendorHint = e.target.value.trim());
+  $("billRef").addEventListener("input", (e) => state.billRef = e.target.value.trim());
+  $("reviewNotes").addEventListener("input", (e) => state.reviewNotes = e.target.value.trim());
+
+  $("authBtn").addEventListener("click", signIn);
+
+  $("billCamera").addEventListener("change", (e) => UI.handleBillFile(e.target.files[0]));
+  $("billUpload").addEventListener("change", (e) => UI.handleBillFile(e.target.files[0]));
+
+  $("labelCamera").addEventListener("change", (e) => { UI.addLabelPhoto(e.target.files[0]); e.target.value = ""; });
+  $("labelUpload").addEventListener("change", (e) => { UI.addLabelPhoto(e.target.files[0]); e.target.value = ""; });
+
+  $("toStep2").addEventListener("click", () => UI.goStep(2));
+  $("toStep3").addEventListener("click", () => UI.goStep(3));
+  $("toStep4").addEventListener("click", () => UI.goStep(4));
+
+  $("saveItem").addEventListener("click", () => UI.saveCapture());
+  $("cancelCapture").addEventListener("click", () => UI.cancelCapture());
+  $("uploadBtn").addEventListener("click", doUpload);
+  $("newBatchBtn").addEventListener("click", () => UI.resetAll());
+
+  const companySel = $("companySelect");
+  state.companyId = parseInt(companySel.value, 10);
+  state.companyLabel = companySel.options[companySel.selectedIndex].textContent;
+});
+</script>
+</body>
+</html>

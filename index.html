@@ -742,9 +742,12 @@ const CONFIG = {
   googleClientId: "531942678700-bds04dk0q3io8j219l531vseunprr3t1.apps.googleusercontent.com",
   googleApiKey:   "",        // unused — OAuth access token is sufficient for Drive v3 REST
   driveFolderId:  "1AKYVdav813wTCDhRIkSXqSdbhCRJmbAK",
-  // drive.file: upload to shared folder. openid+email+profile: capture
-  // uploader identity for the audit trail stamped in meta.json.
-  scopes: "https://www.googleapis.com/auth/drive.file openid email profile",
+  // We need full 'drive' scope (not 'drive.file') because the tablet must
+  // READ bill_extracted.json that was written on the warehouse PC and synced
+  // up via Drive for Desktop — that's a DIFFERENT OAuth client, so drive.file
+  // (which only shows files created by THIS app) cannot see it.
+  // openid+email+profile: uploader identity for the audit trail.
+  scopes: "https://www.googleapis.com/auth/drive openid email profile",
 };
 
 /* -------------------------------------------------------------------------
@@ -2033,7 +2036,8 @@ const UI = {
         if (this.currentStep === 3) this.renderReview();
         toast("Bill extracted — " + (data.lines?.length || 0) + " line items ready", "ok");
       } else {
-        toast("Still waiting — Claude hasn't written bill_extracted.json yet", "warn");
+        const names = files.map(f => f.name).join(", ") || "(none)";
+        toast(`Drive lists ${files.length} file(s) in batch folder: ${names}. No bill_extracted.json yet.`, "warn");
       }
     } catch (e) {
       console.warn("probeExtraction:", e);

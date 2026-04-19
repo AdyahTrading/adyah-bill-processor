@@ -4,6 +4,7 @@
   "allowlist": {
     "purchase.adyah@gmail.com":       { "name": "Purchase (AG)", "companies": [4] },
     "dispatch.adyah@gmail.com":       { "name": "Dispatch (AG)", "companies": [4] },
-    "supervaluegollapalli@gmail.com": { "name": "Super Value",   "companies": [5] }
+    "supervaluegollapalli@gmail.com": { "name": "Super Value",   "companies": [5] },
+    "supervaluesydapuram@gmail.com":  { "name": "SV Sydapuram",  "companies": [6] }
   }
 }

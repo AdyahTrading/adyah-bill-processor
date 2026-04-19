@@ -638,6 +638,9 @@ footer.foot {
           Waiting for Claude to extract line items from the bill…<br>
           <span id="extractWaited">0s</span> elapsed · polling every 15s.
         </div>
+        <div style="text-align:center;margin-top:10px;">
+          <button id="refreshExtractBtn" class="btn ghost small" type="button">Check now</button>
+        </div>
       </div>
 
       <div id="mergedView" class="hidden">
@@ -846,13 +849,23 @@ function expiryToISO(parsed) { return parsed ? `${parsed.y}-${_pad2(parsed.m)}-$
  * reloads (pull-to-refresh, Chrome back-swipe, lock-screen reclaims, …).
  * Stored in sessionStorage — scoped to this tab, cleared on tab close.
  * ------------------------------------------------------------------------- */
-const STORAGE_KEY = "adyah-bp-session-v1";
-const STORAGE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
+const STORAGE_PREFIX = "adyah-bp-v2-";
+const STORAGE_LEGACY_KEY = "adyah-bp-session-v1"; // cleaned up once
+const STORAGE_MAX_AGE_MS = 12 * 60 * 60 * 1000;   // 12 hours — survives lunch/shift-break
+
+// Scope the snapshot to the signed-in email so switching accounts on a shared
+// tablet does not surface another operator's in-progress batch.
+function _storageKey() {
+  return STORAGE_PREFIX + (state.userEmail ? state.userEmail.toLowerCase() : "anon");
+}
 
 function persistState() {
   try {
+    // Best-effort: clear the old sessionStorage key if it's still hanging around
+    try { sessionStorage.removeItem(STORAGE_LEGACY_KEY); } catch {}
     const snap = {
       ts: Date.now(),
+      userEmail: state.userEmail,           // stamp to double-check on restore
       companyId: state.companyId,
       vendorHint: state.vendorHint,
       billRef: state.billRef,
@@ -878,7 +891,7 @@ function persistState() {
         })),
       })),
     };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+    localStorage.setItem(_storageKey(), JSON.stringify(snap));
   } catch (e) {
     // Quota exceeded or storage disabled — not fatal, just lose recovery
     console.warn("persistState failed:", e);
@@ -886,17 +899,26 @@ function persistState() {
 }
 
 function clearPersistedState() {
-  try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+  try { localStorage.removeItem(_storageKey()); } catch {}
+  try { sessionStorage.removeItem(STORAGE_LEGACY_KEY); } catch {}
 }
 
 function restoreState() {
   let raw;
-  try { raw = sessionStorage.getItem(STORAGE_KEY); } catch { return false; }
+  try { raw = localStorage.getItem(_storageKey()); } catch { return false; }
+  // Fallback: also check the old sessionStorage key from the pre-v2 build
+  if (!raw) { try { raw = sessionStorage.getItem(STORAGE_LEGACY_KEY); } catch {} }
   if (!raw) return false;
   let snap;
   try { snap = JSON.parse(raw); } catch { clearPersistedState(); return false; }
   if (!snap || !snap.ts || (Date.now() - snap.ts) > STORAGE_MAX_AGE_MS) {
     clearPersistedState();
+    return false;
+  }
+  // Cross-check: if the snapshot was written by a different user (legacy
+  // tablet shared between accounts), reject it.
+  if (snap.userEmail && state.userEmail
+      && snap.userEmail.toLowerCase() !== state.userEmail.toLowerCase()) {
     return false;
   }
 
@@ -1619,7 +1641,13 @@ const UI = {
       el.classList.toggle("active", s === n);
       el.classList.toggle("done", s < n);
     });
-    if (n === 3) { this.renderReview(); this._tickExtractionWait(); }
+    if (n === 3) {
+      this.renderReview();
+      this._tickExtractionWait();
+      // Immediate probe: don't make the operator wait up to 15s for the
+      // next scheduled poll when they've just arrived at Review.
+      this.probeExtraction();
+    }
     if (n === 4) this.renderUploadSummary();
     if (n === 2) { setTimeout(() => $("barcodeInput").focus(), 50); }
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1954,6 +1982,9 @@ const UI = {
     // 2. Scanned items (bottom) — reuse existing renderer markup
     const scanList = $("mergeScanList");
     scanList.innerHTML = "";
+    if (!state.items.length) {
+      scanList.innerHTML = `<div class="search-empty">No products scanned yet. Go back to Step 2 and scan at least one item before uploading.</div>`;
+    }
     const billByBarcode = new Map((billLines || [])
       .filter(bl => bl.barcode).map(bl => [String(bl.barcode), bl]));
     const billByPid = new Map((billLines || [])
@@ -1984,6 +2015,30 @@ const UI = {
       row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
       scanList.appendChild(row);
     });
+  },
+
+  async probeExtraction() {
+    // One-shot: force an immediate Drive list + fetch, bypassing the 15s timer.
+    if (!state.batchFolderId || !state.token || state.billExtracted) return;
+    try {
+      const files = await driveListChildren(state.batchFolderId);
+      const hit = files.find(f => f.name === "bill_extracted.json");
+      if (hit) {
+        const data = await driveDownloadJson(hit.id);
+        state.billExtracted = data;
+        state.billExtractedAt = new Date().toISOString();
+        persistState();
+        stopExtractionPoll();
+        this._updateExtractionBadge();
+        if (this.currentStep === 3) this.renderReview();
+        toast("Bill extracted — " + (data.lines?.length || 0) + " line items ready", "ok");
+      } else {
+        toast("Still waiting — Claude hasn't written bill_extracted.json yet", "warn");
+      }
+    } catch (e) {
+      console.warn("probeExtraction:", e);
+      toast("Couldn't reach Drive: " + (e.message || e), "err");
+    }
   },
 
   _updateExtractionBadge() {
@@ -2289,6 +2344,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("saveItem").addEventListener("click", () => UI.saveCapture());
   $("cancelCapture").addEventListener("click", () => UI.cancelCapture());
   $("uploadBtn").addEventListener("click", doUpload);
+  $("refreshExtractBtn").addEventListener("click", () => UI.probeExtraction());
   $("newBatchBtn").addEventListener("click", () => UI.resetAll());
 
   const companySel = $("companySelect");

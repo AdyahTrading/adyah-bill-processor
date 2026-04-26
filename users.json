@@ -7,6 +7,7 @@
     "supervaluegollapalli@gmail.com": { "name": "Super Value",   "companies": [5] },
     "supervaluesydapuram@gmail.com":  { "name": "SV Sydapuram",  "companies": [6] },
     "finance.adyah@gmail.com":        { "name": "Finance",       "companies": [4, 5, 6, 10, 12] },
-    "adyah.exec@gmail.com":           { "name": "Adyah Admin",   "companies": [4, 5, 6, 10, 12] }
+    "adyah.exec@gmail.com":           { "name": "Adyah Admin",   "companies": [4, 5, 6, 10, 12] },
+    "chandu1113@gmail.com":           { "name": "Chandra (Dev)", "companies": [4, 5, 6, 10, 12] }
   }
 }

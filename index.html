@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -26,7 +26,7 @@
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* Disable pull-to-refresh on Android Chrome — otherwise a stray downward
+  /* Disable pull-to-refresh on Android Chrome â€” otherwise a stray downward
      swipe at Step 2/3 reloads the page and wipes in-memory work. */
   overscroll-behavior-y: contain;
 }
@@ -39,6 +39,21 @@ header.topbar {
   border-bottom: 1px solid var(--line);
   padding: 10px 16px;
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+header.topbar .nav-link {
+  display: inline-flex; align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+header.topbar .nav-link:hover {
+  background: rgba(255,255,255,0.12);
 }
 header .brand {
   display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.3px;
@@ -226,7 +241,7 @@ input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
 
 .hidden { display: none !important; }
 
-/* Auth gate — full-screen before sign-in / on denial -------------------- */
+/* Auth gate â€” full-screen before sign-in / on denial -------------------- */
 body.unauthed header.topbar,
 body.unauthed main,
 body.unauthed .scanner-indicator { display: none !important; }
@@ -444,16 +459,16 @@ footer.foot {
         <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Sign in
       </button>
-      <div class="gate-foot">© Adyah Trading &amp; Technologies Pvt Ltd</div>
+      <div class="gate-foot">Â© Adyah Trading &amp; Technologies Pvt Ltd</div>
     </div>
 
     <div id="gateLoading" class="hidden">
       <div class="gate-spinner"></div>
-      <div class="muted" style="font-size: 13px;" id="gateLoadingMsg">Verifying access…</div>
+      <div class="muted" style="font-size: 13px;" id="gateLoadingMsg">Verifying accessâ€¦</div>
     </div>
 
     <div id="gateDenied" class="gate-denied hidden">
-      <div class="d-icon">⚠</div>
+      <div class="d-icon">âš </div>
       <h2>Access denied</h2>
       <p>The account <span class="d-email" id="deniedEmail"></span> is not authorised for this app.</p>
       <p>Please ask the Adyah administrator to add your address to the allowlist.</p>
@@ -469,6 +484,7 @@ footer.foot {
     <div class="logo">A</div>
     <div>Adyah Bill Processor</div>
   </div>
+  <a href="/jobs" class="nav-link" title="Bill Jobs — upload/extraction/PO status, cancel & restart stuck jobs">Bill Jobs ↗</a>
   <div class="spacer"></div>
   <select id="companySelect" title="Branch">
     <option value="4" selected>Adyah Gollapalle</option>
@@ -479,7 +495,7 @@ footer.foot {
   </select>
   <div id="extractBadge" class="extract-badge hidden" title="Bill extraction status">
     <span class="eb-dot"></span>
-    <span id="extractBadgeTxt">extracting bill…</span>
+    <span id="extractBadgeTxt">extracting billâ€¦</span>
   </div>
   <div id="authBtn" class="auth on" title="Signed in">
     <span class="dot"></span>
@@ -506,7 +522,7 @@ footer.foot {
   <!-- STEP 1: BILL -->
   <section id="step1" class="step-panel">
     <div class="card">
-      <h2>Step 1 — Scan vendor bill</h2>
+      <h2>Step 1 â€” Scan vendor bill</h2>
       <p class="hint">Capture or upload the full vendor bill (PDF, JPG, or PNG). The warehouse PC reads it with vision to extract line items, taxes and totals.</p>
 
       <div class="grid2">
@@ -522,10 +538,10 @@ footer.foot {
 
       <div class="row" style="margin-top: 14px;">
         <button type="button" class="file-btn" id="billCameraBtn">
-          📸 Photograph bill
+          ðŸ“¸ Photograph bill
         </button>
         <label class="file-btn">
-          📄 Upload file (PDF/image)
+          ðŸ“„ Upload file (PDF/image)
           <input type="file" accept="image/*,application/pdf" id="billUpload" />
         </label>
         <input type="file" accept="image/*" capture="environment" id="billCameraFallback" style="display:none" />
@@ -534,7 +550,7 @@ footer.foot {
       <div id="billPreview" class="photo-preview"></div>
       <div class="nav-btns">
         <div></div>
-        <button id="toStep2" class="btn" disabled>Next · Scan products →</button>
+        <button id="toStep2" class="btn" disabled>Next Â· Scan products â†’</button>
       </div>
     </div>
   </section>
@@ -542,20 +558,20 @@ footer.foot {
   <!-- STEP 2: PRODUCTS -->
   <section id="step2" class="step-panel hidden">
     <div class="card">
-      <h2>Step 2 — Scan products</h2>
+      <h2>Step 2 â€” Scan products</h2>
       <p class="hint">Scan the barcode with the Bluetooth scanner, then capture one photo of the label showing <b>batch number</b>, <b>manufacturing / expiry date</b>, and <b>MRP</b>. Enter the received quantity. Repeat for every item on the bill.</p>
 
       <label class="label">Scan barcode <span class="muted">(scanner types here automatically)</span></label>
       <input type="text" id="barcodeInput" class="scan-input"
-             placeholder="Waiting for scanner… or tap to type"
+             placeholder="Waiting for scannerâ€¦ or tap to type"
              inputmode="numeric" enterkeyhint="done"
              autocomplete="off" autocapitalize="off" autocorrect="off"
              spellcheck="false" />
 
       <div class="search-wrap">
         <input type="text" id="searchInput" class="search-input"
-               placeholder="No barcode? Search by product name…" autocomplete="off" />
-        <div class="search-status" id="searchStatus">loading catalog…</div>
+               placeholder="No barcode? Search by product nameâ€¦" autocomplete="off" />
+        <div class="search-status" id="searchStatus">loading catalogâ€¦</div>
         <div class="search-results hidden" id="searchResults"></div>
       </div>
 
@@ -571,9 +587,9 @@ footer.foot {
           <div id="batchesList" class="batches-list" style="margin-top: 14px;"></div>
 
           <div class="row" style="margin-top: 10px;">
-            <button type="button" class="btn secondary" id="addBatchCamBtn">➕ Add batch (camera)</button>
+            <button type="button" class="btn secondary" id="addBatchCamBtn">âž• Add batch (camera)</button>
             <label class="btn ghost" style="cursor:pointer;">
-              🖼️ Upload photo
+              ðŸ–¼ï¸ Upload photo
               <input type="file" accept="image/*" id="labelUpload" style="display:none" />
             </label>
             <input type="file" accept="image/*" capture="environment" id="labelCameraFallback" style="display:none" />
@@ -596,15 +612,15 @@ footer.foot {
     </div>
 
     <div class="nav-btns">
-      <button class="btn ghost" onclick="UI.goStep(1)">← Back</button>
-      <button id="toStep3" class="btn" disabled>Next · Review →</button>
+      <button class="btn ghost" onclick="UI.goStep(1)">â† Back</button>
+      <button id="toStep3" class="btn" disabled>Next Â· Review â†’</button>
     </div>
   </section>
 
   <!-- STEP 3: REVIEW (merged scans vs bill-extracted lines) -->
   <section id="step3" class="step-panel hidden">
     <div class="card">
-      <h2>Step 3 — Review &amp; confirm</h2>
+      <h2>Step 3 â€” Review &amp; confirm</h2>
       <p class="hint">Compare what the vendor billed (top) against what you physically scanned (bottom). The warehouse PC will reconcile both before creating the draft PO.</p>
 
       <div class="grid2">
@@ -628,15 +644,15 @@ footer.foot {
 
       <div style="margin-top: 14px;">
         <label class="label">Warehouse notes (optional)</label>
-        <textarea id="reviewNotes" rows="3" placeholder="Quantity mismatch, damage, vendor followup reasons…"></textarea>
+        <textarea id="reviewNotes" rows="3" placeholder="Quantity mismatch, damage, vendor followup reasonsâ€¦"></textarea>
       </div>
 
       <!-- Extraction status + merged view -->
       <div id="extractStatus" class="extract-status">
         <div class="gate-spinner" style="margin: 14px auto 8px;"></div>
         <div class="muted" style="text-align:center;font-size:13px;">
-          Waiting for Claude to extract line items from the bill…<br>
-          <span id="extractWaited">0s</span> elapsed · polling every 15s.
+          Waiting for Claude to extract line items from the billâ€¦<br>
+          <span id="extractWaited">0s</span> elapsed Â· polling every 15s.
         </div>
         <div style="text-align:center;margin-top:10px;">
           <button id="refreshExtractBtn" class="btn ghost small" type="button">Check now</button>
@@ -645,26 +661,26 @@ footer.foot {
 
       <div id="mergedView" class="hidden">
         <div class="merge-section">
-          <h3 class="merge-h">📄 Vendor bill lines <span class="muted" id="mergeBillCount"></span></h3>
+          <h3 class="merge-h">ðŸ“„ Vendor bill lines <span class="muted" id="mergeBillCount"></span></h3>
           <div id="mergeBillLines" class="merge-list"></div>
         </div>
         <div class="merge-section">
-          <h3 class="merge-h">📦 Scanned / received <span class="muted" id="mergeScanCount"></span></h3>
+          <h3 class="merge-h">ðŸ“¦ Scanned / received <span class="muted" id="mergeScanCount"></span></h3>
           <div id="mergeScanList" class="items-list"></div>
         </div>
       </div>
     </div>
 
     <div class="nav-btns">
-      <button class="btn ghost" onclick="UI.goStep(2)">← Back</button>
-      <button id="toStep4" class="btn">Next · Upload batch →</button>
+      <button class="btn ghost" onclick="UI.goStep(2)">â† Back</button>
+      <button id="toStep4" class="btn">Next Â· Upload batch â†’</button>
     </div>
   </section>
 
   <!-- STEP 4: UPLOAD -->
   <section id="step4" class="step-panel hidden">
     <div class="card">
-      <h2>Step 4 — Upload to Drive</h2>
+      <h2>Step 4 â€” Upload to Drive</h2>
       <p class="hint">Uploads the bill and all label photos to the <code>Adyah Bill Processor / pending / </code> folder. Your PC picks them up automatically via Drive for Desktop and the warehouse team runs <code>/process-vendor-bill</code> on Claude Code to create the draft PO in Odoo.</p>
 
       <div class="summary" id="uploadSummary"></div>
@@ -672,10 +688,10 @@ footer.foot {
     </div>
 
     <div class="nav-btns">
-      <button class="btn ghost" onclick="UI.goStep(3)">← Back</button>
+      <button class="btn ghost" onclick="UI.goStep(3)">â† Back</button>
       <div style="display: flex; gap: 10px;">
-        <button id="uploadBtn" class="btn">☁️ Upload batch</button>
-        <button id="newBatchBtn" class="btn secondary hidden">✨ Start new batch</button>
+        <button id="uploadBtn" class="btn">â˜ï¸ Upload batch</button>
+        <button id="newBatchBtn" class="btn secondary hidden">âœ¨ Start new batch</button>
       </div>
     </div>
   </section>
@@ -699,7 +715,7 @@ footer.foot {
     <div id="camLive" style="display: flex; gap: 10px; align-items: center;">
       <div class="cam-title" id="camTitle">Photograph bill</div>
       <button id="camShutter" class="cam-shutter" title="Capture"></button>
-      <button id="camSwitch" class="btn ghost small" title="Switch camera" style="display:none;">⇄</button>
+      <button id="camSwitch" class="btn ghost small" title="Switch camera" style="display:none;">â‡„</button>
     </div>
     <div id="camReview" class="hidden" style="display: flex; gap: 10px; align-items: center;">
       <button id="camRetake" class="btn secondary">Retake</button>
@@ -710,7 +726,7 @@ footer.foot {
 
 <div class="progress" id="progress">
   <div class="box">
-    <div style="font-weight: 700;" id="progressTitle">Uploading…</div>
+    <div style="font-weight: 700;" id="progressTitle">Uploadingâ€¦</div>
     <div class="muted" style="font-size: 13px; margin-top: 4px;" id="progressSub"></div>
     <div class="bar"><div id="progressBar"></div></div>
   </div>
@@ -718,16 +734,16 @@ footer.foot {
 
 <script>
 /* -------------------------------------------------------------------------
- * CONFIG — fill these in once, then save the file.
+ * CONFIG â€” fill these in once, then save the file.
  *
  * 1. googleClientId:
- *    Google Cloud Console → APIs & Services → Credentials → Create OAuth
- *    2.0 Client ID → Web application. Add this page's URL (and http://localhost
+ *    Google Cloud Console â†’ APIs & Services â†’ Credentials â†’ Create OAuth
+ *    2.0 Client ID â†’ Web application. Add this page's URL (and http://localhost
  *    if testing locally) as an Authorized JavaScript origin. Paste the
  *    resulting Client ID here (ends with ".apps.googleusercontent.com").
  *
  * 2. googleApiKey:
- *    Same project → Create API Key. Restrict to the Drive API for safety.
+ *    Same project â†’ Create API Key. Restrict to the Drive API for safety.
  *
  * 3. driveFolderId:
  *    Open the "Adyah Bill Processor/pending" folder in Google Drive in a
@@ -735,16 +751,16 @@ footer.foot {
  *      https://drive.google.com/drive/folders/<FOLDER_ID>
  *    Paste <FOLDER_ID> here.
  *
- * 4. Enable the Drive API in APIs & Services → Library.
+ * 4. Enable the Drive API in APIs & Services â†’ Library.
  * ------------------------------------------------------------------------- */
 const CONFIG = {
   // Google Cloud project: adyah-bill-processor
   googleClientId: "531942678700-bds04dk0q3io8j219l531vseunprr3t1.apps.googleusercontent.com",
-  googleApiKey:   "",        // unused — OAuth access token is sufficient for Drive v3 REST
+  googleApiKey:   "",        // unused â€” OAuth access token is sufficient for Drive v3 REST
   driveFolderId:  "1AKYVdav813wTCDhRIkSXqSdbhCRJmbAK",
   // We need full 'drive' scope (not 'drive.file') because the tablet must
   // READ bill_extracted.json that was written on the warehouse PC and synced
-  // up via Drive for Desktop — that's a DIFFERENT OAuth client, so drive.file
+  // up via Drive for Desktop â€” that's a DIFFERENT OAuth client, so drive.file
   // (which only shows files created by THIS app) cannot see it.
   // openid+email+profile: uploader identity for the audit trail.
   scopes: "https://www.googleapis.com/auth/drive openid email profile",
@@ -806,9 +822,9 @@ function slug(s) { return String(s || "").replace(/[^a-zA-Z0-9._-]/g, "_").slice
 /* -------------------------------------------------------------------------
  * Expiry parsing. Accepts:
  *   DD/MM/YYYY   DD-MM-YYYY   (full)
- *   MM/YYYY      MM-YYYY      → last day of that month
+ *   MM/YYYY      MM-YYYY      â†’ last day of that month
  *   YYYY-MM-DD   YYYY/MM/DD   (ISO-ish)
- *   YYYY-MM      YYYY/MM      → last day of that month
+ *   YYYY-MM      YYYY/MM      â†’ last day of that month
  *   "APR 2028"   "DEC 2027"
  * Returns { d, m, y } or null.
  * ------------------------------------------------------------------------- */
@@ -849,12 +865,12 @@ function expiryToISO(parsed) { return parsed ? `${parsed.y}-${_pad2(parsed.m)}-$
 
 /* -------------------------------------------------------------------------
  * Session persistence. Keeps an active batch alive across accidental
- * reloads (pull-to-refresh, Chrome back-swipe, lock-screen reclaims, …).
- * Stored in sessionStorage — scoped to this tab, cleared on tab close.
+ * reloads (pull-to-refresh, Chrome back-swipe, lock-screen reclaims, â€¦).
+ * Stored in sessionStorage â€” scoped to this tab, cleared on tab close.
  * ------------------------------------------------------------------------- */
 const STORAGE_PREFIX = "adyah-bp-v2-";
 const STORAGE_LEGACY_KEY = "adyah-bp-session-v1"; // cleaned up once
-const STORAGE_MAX_AGE_MS = 12 * 60 * 60 * 1000;   // 12 hours — survives lunch/shift-break
+const STORAGE_MAX_AGE_MS = 12 * 60 * 60 * 1000;   // 12 hours â€” survives lunch/shift-break
 
 // Scope the snapshot to the signed-in email so switching accounts on a shared
 // tablet does not surface another operator's in-progress batch.
@@ -896,7 +912,7 @@ function persistState() {
     };
     localStorage.setItem(_storageKey(), JSON.stringify(snap));
   } catch (e) {
-    // Quota exceeded or storage disabled — not fatal, just lose recovery
+    // Quota exceeded or storage disabled â€” not fatal, just lose recovery
     console.warn("persistState failed:", e);
   }
 }
@@ -952,7 +968,7 @@ function restoreState() {
     } else {
       const p = document.createElement("div");
       p.className = "chip";
-      p.textContent = "📄 " + (snap.bill.name || "bill") + "  (restored)";
+      p.textContent = "ðŸ“„ " + (snap.bill.name || "bill") + "  (restored)";
       box.appendChild(p);
     }
     $("toStep2").disabled = false;
@@ -1006,7 +1022,7 @@ function dataUrlToBlob(dataUrl) {
  * Google Identity Services + Auth + Allowlist
  *
  * Flow:
- *   1. On load, the body has class "unauthed" — the app UI is hidden and the
+ *   1. On load, the body has class "unauthed" â€” the app UI is hidden and the
  *      full-screen <div id="authGate"> is shown. Only "Sign in with Google" is
  *      clickable.
  *   2. User signs in. We fetch their Google profile (email, name) and look
@@ -1040,7 +1056,7 @@ const Auth = {
   async handleToken(accessToken) {
     state.token = accessToken;
     this._show("gateLoading");
-    $("gateLoadingMsg").textContent = "Verifying access…";
+    $("gateLoadingMsg").textContent = "Verifying accessâ€¦";
 
     // 1. Who signed in?
     try {
@@ -1057,7 +1073,7 @@ const Auth = {
     }
 
     if (!state.userEmail) {
-      this.showDenied("(unknown — userinfo fetch failed)");
+      this.showDenied("(unknown â€” userinfo fetch failed)");
       return;
     }
 
@@ -1065,8 +1081,8 @@ const Auth = {
     let list;
     try { list = await this.loadAllowlist(); }
     catch (e) {
-      $("gateLoadingMsg").textContent = "Allowlist unavailable — cannot verify access.";
-      toast("users.json missing — ask admin to deploy it", "err");
+      $("gateLoadingMsg").textContent = "Allowlist unavailable â€” cannot verify access.";
+      toast("users.json missing â€” ask admin to deploy it", "err");
       return;
     }
     const entry = list[state.userEmail.toLowerCase()];
@@ -1094,7 +1110,7 @@ const Auth = {
       if (ok && firstAllowed === null) firstAllowed = o;
     });
     if (!firstAllowed) {
-      this.showDenied(state.userEmail + " — no branches assigned");
+      this.showDenied(state.userEmail + " â€” no branches assigned");
       return;
     }
     sel.value = firstAllowed.value;
@@ -1168,7 +1184,7 @@ function initGIS() {
 
 function signIn() {
   if (!gisReady || !tokenClient) {
-    toast("Config missing — set googleClientId in the file", "err");
+    toast("Config missing â€” set googleClientId in the file", "err");
     return;
   }
   tokenClient.requestAccessToken({ prompt: state.token ? "" : "consent" });
@@ -1233,7 +1249,7 @@ async function driveUpload(blob, filename, parentId) {
 }
 
 /* -------------------------------------------------------------------------
- * Product catalog — loaded once on startup from products.json served
+ * Product catalog â€” loaded once on startup from products.json served
  * alongside index.html. Used for:
  *   1) the "No barcode?" name-search fallback in Step 2
  *   2) enriching scanned barcodes with product_id / name / MRP hints
@@ -1265,7 +1281,7 @@ const Catalog = {
       }
       this.loaded = true;
       this.loadedAt = new Date();
-      status.textContent = items.length.toLocaleString() + " SKUs · ready";
+      status.textContent = items.length.toLocaleString() + " SKUs Â· ready";
       status.style.color = "var(--ok)";
     } catch (e) {
       status.textContent = "catalog unavailable";
@@ -1331,7 +1347,7 @@ const Search = {
     const q = (query || "").trim();
     if (q.length < 2) { this.close(); return; }
     if (!Catalog.loaded) {
-      box.innerHTML = `<div class="search-empty">Catalog not loaded — make sure <code>products.json</code> is deployed alongside <code>index.html</code>.</div>`;
+      box.innerHTML = `<div class="search-empty">Catalog not loaded â€” make sure <code>products.json</code> is deployed alongside <code>index.html</code>.</div>`;
       box.classList.remove("hidden");
       return;
     }
@@ -1348,10 +1364,10 @@ const Search = {
       const bc = p.barcode ? `<b>${p.barcode}</b>` : `<span class="r-nobarcode">NO BARCODE</span>`;
       const parts = [bc];
       if (p.hsn) parts.push("HSN " + p.hsn);
-      if (p.list_price != null) parts.push("MRP ₹" + p.list_price);
+      if (p.list_price != null) parts.push("MRP â‚¹" + p.list_price);
       if (p.category) parts.push(p.category);
       row.innerHTML = `<div class="r-name">${p.name}</div>
-                      <div class="r-sub">${parts.join(" · ")}</div>`;
+                      <div class="r-sub">${parts.join(" Â· ")}</div>`;
       row.onclick = () => { this.select(p); };
       box.appendChild(row);
     });
@@ -1371,7 +1387,7 @@ const Search = {
 };
 
 /* -------------------------------------------------------------------------
- * In-page camera — getUserMedia with a back-camera preference.
+ * In-page camera â€” getUserMedia with a back-camera preference.
  * Works on desktop (webcam) and Android tablets (rear camera). Falls back
  * to <input capture> if getUserMedia is blocked or unavailable.
  * ------------------------------------------------------------------------- */
@@ -1483,7 +1499,7 @@ const Camera = {
   _fallback(reason) {
     const inputId = this.mode === "bill" ? "billCameraFallback" : "labelCameraFallback";
     const el = $("camError");
-    el.textContent = "Live camera unavailable (" + reason + "). Opening file picker…";
+    el.textContent = "Live camera unavailable (" + reason + "). Opening file pickerâ€¦";
     el.classList.remove("hidden");
     $("camVideo").classList.add("hidden");
     setTimeout(() => {
@@ -1494,7 +1510,7 @@ const Camera = {
 };
 
 /* -------------------------------------------------------------------------
- * Parallel pipeline — Phase A (bill upload) + bill-extraction poller.
+ * Parallel pipeline â€” Phase A (bill upload) + bill-extraction poller.
  *
  * Phase A fires on "Next" from Step 1: creates the batch folder, uploads
  * bill.<ext> and phase1.json. The operator then moves on to Step 2 while
@@ -1507,7 +1523,7 @@ async function phaseAUpload() {
   if (!state.token) throw new Error("not signed in");
   if (!state.bill)  throw new Error("no bill to upload");
   if (!CONFIG.driveFolderId) throw new Error("driveFolderId not configured");
-  if (state.phaseAUploaded) return;   // idempotent — already done
+  if (state.phaseAUploaded) return;   // idempotent â€” already done
 
   state.phaseAUploading = true;
   const bId = batchId();
@@ -1523,7 +1539,7 @@ async function phaseAUpload() {
   const billName = "bill." + ext;
   await driveUpload(bill.file, billName, state.batchFolderId);
 
-  // 3. phase1.json — operator metadata known at this point
+  // 3. phase1.json â€” operator metadata known at this point
   const phase1 = {
     batch_id: bId,
     phase: "A",
@@ -1564,10 +1580,10 @@ function startExtractionPoll() {
         stopExtractionPoll();
         if (UI.currentStep === 3) UI.renderReview();
         UI._updateExtractionBadge();
-        toast("Bill extracted — " + (data.lines?.length || 0) + " line items ready", "ok");
+        toast("Bill extracted â€” " + (data.lines?.length || 0) + " line items ready", "ok");
       }
     } catch (e) {
-      // Silent failures during polling — often transient network blips
+      // Silent failures during polling â€” often transient network blips
       console.warn("extraction poll:", e);
     }
   };
@@ -1584,7 +1600,7 @@ function stopExtractionPoll() {
 }
 
 /* -------------------------------------------------------------------------
- * Scanner — Bluetooth HID scanners behave as a keyboard.
+ * Scanner â€” Bluetooth HID scanners behave as a keyboard.
  * We keep barcodeInput focused on step 2, and treat Enter as "scan complete".
  * ------------------------------------------------------------------------- */
 const Scanner = {
@@ -1674,7 +1690,7 @@ const UI = {
     } else {
       const p = document.createElement("div");
       p.className = "chip";
-      p.textContent = "📄 " + state.bill.name + "  (" + Math.round(file.size/1024) + " KB)";
+      p.textContent = "ðŸ“„ " + state.bill.name + "  (" + Math.round(file.size/1024) + " KB)";
       box.appendChild(p);
     }
     $("toStep2").disabled = false;
@@ -1698,25 +1714,25 @@ const UI = {
     };
     const header = $("capBarcode");
     if (productMeta) {
-      // Matched in local catalog — show name + full context chips
+      // Matched in local catalog â€” show name + full context chips
       const bcLine = hasBarcode
         ? `<span style="font-family:ui-monospace,monospace;font-size:13px;color:var(--text-mute);">${barcode}</span>`
-        : `<span class="r-nobarcode" style="font-size:11px;letter-spacing:0.5px;">NO BARCODE · id ${productMeta.product_id}</span>`;
+        : `<span class="r-nobarcode" style="font-size:11px;letter-spacing:0.5px;">NO BARCODE Â· id ${productMeta.product_id}</span>`;
       const chips = [];
       if (productMeta.hsn)        chips.push(`<span class="ctx-chip">HSN ${productMeta.hsn}</span>`);
       if (productMeta.list_price != null)
-                                  chips.push(`<span class="ctx-chip">MRP ₹${productMeta.list_price}</span>`);
+                                  chips.push(`<span class="ctx-chip">MRP â‚¹${productMeta.list_price}</span>`);
       if (productMeta.category)   chips.push(`<span class="ctx-chip">${productMeta.category}</span>`);
       header.innerHTML =
         `<div style="font-size:15px;color:var(--text);font-weight:700;line-height:1.25;">${productMeta.name}</div>
          <div style="margin-top:2px;">${bcLine}</div>
          ${chips.length ? `<div class="ctx-chips">${chips.join("")}</div>` : ""}`;
     } else {
-      // No match in local catalog — allow continuation, flag as unknown
+      // No match in local catalog â€” allow continuation, flag as unknown
       header.innerHTML =
         `<div style="font-family:ui-monospace,monospace;font-size:15px;">${barcode}</div>
-         <div class="unknown-chip">⚠ Unknown barcode — new product</div>
-         <div class="muted" style="font-size:11px;margin-top:3px;">Capture the label &amp; qty — warehouse PC will create the product in Odoo when processing.</div>`;
+         <div class="unknown-chip">âš  Unknown barcode â€” new product</div>
+         <div class="muted" style="font-size:11px;margin-top:3px;">Capture the label &amp; qty â€” warehouse PC will create the product in Odoo when processing.</div>`;
     }
     $("unitHint").value = "";
     $("capturePanel").classList.remove("hidden");
@@ -1746,11 +1762,11 @@ const UI = {
       const empty = document.createElement("div");
       empty.className = "batches-empty";
       empty.innerHTML = `
-        <div class="be-icon">📷</div>
+        <div class="be-icon">ðŸ“·</div>
         <div class="be-title">No batches yet</div>
         <div class="be-body">
-          Tap <b>➕ Add batch (camera)</b> below.
-          Each tap captures one label photo — then the batch card appears here
+          Tap <b>âž• Add batch (camera)</b> below.
+          Each tap captures one label photo â€” then the batch card appears here
           with a <b>Qty</b> field where you type the physically counted quantity.
         </div>
         <div class="be-hint">One batch = one lot / expiry date. Most SKUs need only one.</div>
@@ -1779,15 +1795,15 @@ const UI = {
           <div class="grid2">
             <div>
               <label class="label">Expiry <span class="muted">(DD/MM/YYYY)</span></label>
-              <input type="text" class="bc-exp" placeholder="auto-detect · DD/MM/YYYY" inputmode="numeric" value="${b.expiration_date || ''}" />
+              <input type="text" class="bc-exp" placeholder="auto-detect Â· DD/MM/YYYY" inputmode="numeric" value="${b.expiration_date || ''}" />
             </div>
             <div>
-              <label class="label">MRP <span class="muted">(₹)</span></label>
+              <label class="label">MRP <span class="muted">(â‚¹)</span></label>
               <input type="number" class="bc-mrp" step="any" placeholder="auto-detect" value="${b.mrp ?? ''}" />
             </div>
           </div>
         </div>
-        <button type="button" class="bc-remove" title="Remove batch">✕</button>
+        <button type="button" class="bc-remove" title="Remove batch">âœ•</button>
       `;
       const qIn = card.querySelector(".bc-qty");
       qIn.oninput = () => { b.qty = parseFloat(qIn.value) || 0; this._refreshTotals(); };
@@ -1821,12 +1837,12 @@ const UI = {
     const total = batches.reduce((a, b) => a + (parseFloat(b.qty) || 0), 0);
     $("totalQty").textContent = total;
     $("batchCountLbl").textContent = batches.length
-      ? ` · ${batches.length} batch${batches.length > 1 ? "es" : ""}`
+      ? ` Â· ${batches.length} batch${batches.length > 1 ? "es" : ""}`
       : "";
     const ok = batches.length > 0 && total > 0 && batches.every(b => (parseFloat(b.qty) || 0) > 0);
     $("saveItem").disabled = !ok;
     $("capStatus").textContent = batches.length
-      ? "Tap “➕ Add batch” for any additional lot/expiry. Edit qty per batch."
+      ? "Tap â€œâž• Add batchâ€ for any additional lot/expiry. Edit qty per batch."
       : "Add one batch per distinct lot / expiry date on this SKU";
   },
 
@@ -1877,18 +1893,18 @@ const UI = {
           const bits = [`Batch ${i + 1}`, `qty ${b.qty}`];
           if (b.lot_name) bits.push(b.lot_name);
           if (b.expiration_date) bits.push("exp " + b.expiration_date);
-          return bits.join(" · ");
+          return bits.join(" Â· ");
         })
         .join(" | ");
       const title = it.product_name
         ? `<div class="bc" style="color:var(--text);font-family:inherit;font-weight:700;font-size:14px;">${it.product_name}</div>
-           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE · id ${it.product_id}</span>`}</div>`
+           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE Â· id ${it.product_id}</span>`}</div>`
         : `<div class="bc">${it.barcode}</div>`;
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.innerHTML = `${title}
-                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""}</div>
-                        <div class="sub" style="font-size:11px;">${breakdown || "—"}</div>`;
+                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> Â· ${bn} batch${bn>1?"es":""}</div>
+                        <div class="sub" style="font-size:11px;">${breakdown || "â€”"}</div>`;
       const actions = document.createElement("div");
       actions.className = "actions";
       const edit = document.createElement("button"); edit.className = "btn ghost small"; edit.textContent = "Edit";
@@ -1921,9 +1937,9 @@ const UI = {
 
   renderReview() {
     $("rvCompany").textContent = state.companyLabel;
-    $("rvVendor").textContent = state.vendorHint || "—";
-    $("rvRef").textContent = state.billRef || "—";
-    $("rvBill").textContent = state.bill ? state.bill.name : "—";
+    $("rvVendor").textContent = state.vendorHint || "â€”";
+    $("rvRef").textContent = state.billRef || "â€”";
+    $("rvBill").textContent = state.bill ? state.bill.name : "â€”";
 
     // Toggle merged-view vs waiting spinner
     if (state.billExtracted) {
@@ -1942,7 +1958,7 @@ const UI = {
     $("mergeBillCount").textContent = billLines.length ? `(${billLines.length})` : "";
     $("mergeScanCount").textContent = `(${state.items.length})`;
 
-    // Build quick lookups — barcode and product_id — from scans
+    // Build quick lookups â€” barcode and product_id â€” from scans
     const scanByBarcode = new Map();
     const scanByPid = new Map();
     state.items.forEach(it => {
@@ -1954,7 +1970,7 @@ const UI = {
     const billList = $("mergeBillLines");
     billList.innerHTML = "";
     if (!billLines.length) {
-      billList.innerHTML = `<div class="search-empty">No line items extracted from the bill yet — PC may still be processing or the bill was unreadable.</div>`;
+      billList.innerHTML = `<div class="search-empty">No line items extracted from the bill yet â€” PC may still be processing or the bill was unreadable.</div>`;
     } else {
       billLines.forEach((bl) => {
         const matched = (bl.barcode && scanByBarcode.get(String(bl.barcode)))
@@ -1965,8 +1981,8 @@ const UI = {
         const sub = [
           bl.barcode ? `BC ${bl.barcode}` : null,
           bl.hsn ? `HSN ${bl.hsn}` : null,
-          bl.rate != null ? `@ ₹${bl.rate}` : null,
-        ].filter(Boolean).join(" · ");
+          bl.rate != null ? `@ â‚¹${bl.rate}` : null,
+        ].filter(Boolean).join(" Â· ");
         const tag = matched
           ? `<span class="merge-match ok">MATCHED</span>`
           : `<span class="merge-match warn">NOT SCANNED</span>`;
@@ -1975,14 +1991,14 @@ const UI = {
             <div class="ml-name">${name} ${tag}</div>
             ${sub ? `<div class="ml-sub">${sub}</div>` : ""}
           </div>
-          <div class="ml-qty">${bl.qty ?? "—"}${bl.uom ? " " + bl.uom : ""}</div>
-          <div class="ml-amount">${bl.amount != null ? "₹" + bl.amount : ""}</div>
+          <div class="ml-qty">${bl.qty ?? "â€”"}${bl.uom ? " " + bl.uom : ""}</div>
+          <div class="ml-amount">${bl.amount != null ? "â‚¹" + bl.amount : ""}</div>
         `;
         billList.appendChild(row);
       });
     }
 
-    // 2. Scanned items (bottom) — reuse existing renderer markup
+    // 2. Scanned items (bottom) â€” reuse existing renderer markup
     const scanList = $("mergeScanList");
     scanList.innerHTML = "";
     if (!state.items.length) {
@@ -2014,7 +2030,7 @@ const UI = {
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.innerHTML = `${title}
-        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""} ${tag}</div>`;
+        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> Â· ${bn} batch${bn>1?"es":""} ${tag}</div>`;
       row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
       scanList.appendChild(row);
     });
@@ -2022,7 +2038,7 @@ const UI = {
 
   async probeExtraction() {
     // One-shot: force an immediate Drive list + fetch, bypassing the 15s timer.
-    // If we already have an extracted JSON we re-fetch anyway — the PC-side
+    // If we already have an extracted JSON we re-fetch anyway â€” the PC-side
     // skill may have refreshed it with fuzzy product matches.
     if (!state.batchFolderId || !state.token) return;
     try {
@@ -2041,11 +2057,11 @@ const UI = {
         if (this.currentStep === 3) this.renderReview();
         const matched = (data.lines || []).filter(l => l.product_id).length;
         if (wasPresent && oldAt !== newAt) {
-          toast(`Bill data refreshed — ${matched}/${data.lines?.length || 0} lines mapped to Odoo`, "ok");
+          toast(`Bill data refreshed â€” ${matched}/${data.lines?.length || 0} lines mapped to Odoo`, "ok");
         } else if (wasPresent) {
-          toast(`No change — ${matched}/${data.lines?.length || 0} lines mapped`, "");
+          toast(`No change â€” ${matched}/${data.lines?.length || 0} lines mapped`, "");
         } else {
-          toast(`Bill extracted — ${data.lines?.length || 0} lines, ${matched} mapped to Odoo`, "ok");
+          toast(`Bill extracted â€” ${data.lines?.length || 0} lines, ${matched} mapped to Odoo`, "ok");
         }
       } else {
         const names = files.map(f => f.name).join(", ") || "(none)";
@@ -2066,7 +2082,7 @@ const UI = {
       $("extractBadgeTxt").textContent = "bill extracted";
     } else {
       badge.classList.remove("ready");
-      $("extractBadgeTxt").textContent = "extracting bill…";
+      $("extractBadgeTxt").textContent = "extracting billâ€¦";
     }
   },
 
@@ -2093,7 +2109,7 @@ const UI = {
   },
 
   _legacyRenderReviewBody() {
-    // intentionally empty — body now rendered inside _renderMergedView
+    // intentionally empty â€” body now rendered inside _renderMergedView
   },
 
   _legacyRenderPlaceholder() {
@@ -2112,21 +2128,21 @@ const UI = {
       const bn = (it.batches || []).length;
       const breakdown = (it.batches || [])
         .map((b, i) => {
-          const bits = [`B${i + 1} × ${b.qty}`];
+          const bits = [`B${i + 1} Ã— ${b.qty}`];
           if (b.lot_name) bits.push(b.lot_name);
           if (b.expiration_date) bits.push("exp " + b.expiration_date);
-          if (b.mrp != null) bits.push("MRP ₹" + b.mrp);
+          if (b.mrp != null) bits.push("MRP â‚¹" + b.mrp);
           return bits.join(" ");
         })
         .join(" | ");
       const title = it.product_name
         ? `<div class="bc" style="color:var(--text);font-family:inherit;font-weight:700;font-size:14px;">${it.product_name}</div>
-           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE · id ${it.product_id}</span>`}</div>`
+           <div class="bc" style="font-size:12px;margin-top:1px;">${it.barcode || `<span class="r-nobarcode">NO BARCODE Â· id ${it.product_id}</span>`}</div>`
         : `<div class="bc">${it.barcode}</div>`;
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.innerHTML = `${title}
-                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> · ${bn} batch${bn>1?"es":""}</div>
+                        <div class="sub"><b style="color:var(--text);">Total ${total}${it.unit ? " " + it.unit : ""}</b> Â· ${bn} batch${bn>1?"es":""}</div>
                         <div class="sub" style="font-size:11px;">${breakdown}</div>`;
       row.appendChild(thumbs); row.appendChild(meta); row.appendChild(document.createElement("div"));
       list.appendChild(row);
@@ -2139,14 +2155,14 @@ const UI = {
     const totalBatches = state.items.reduce((a,i) => a + (i.batches?.length || 0), 0);
     const totalQty = state.items.reduce((a,i) => a + UI._itemTotalQty(i), 0);
     const items = [
-      { label: `Branch · ${state.companyLabel}`, cls: "ok" },
+      { label: `Branch Â· ${state.companyLabel}`, cls: "ok" },
       { label: `${state.items.length} SKU${state.items.length === 1 ? "" : "s"}`, cls: "ok" },
       { label: `${totalBatches} batch${totalBatches === 1 ? "" : "es"}`, cls: "" },
       { label: `${totalQty} total units`, cls: "" },
-      { label: state.bill ? ("Bill · " + state.bill.name) : "No bill", cls: state.bill ? "ok" : "warn" },
+      { label: state.bill ? ("Bill Â· " + state.bill.name) : "No bill", cls: state.bill ? "ok" : "warn" },
     ];
-    if (state.vendorHint) items.push({ label: "Vendor · " + state.vendorHint, cls: "" });
-    if (state.billRef)    items.push({ label: "Ref · " + state.billRef, cls: "" });
+    if (state.vendorHint) items.push({ label: "Vendor Â· " + state.vendorHint, cls: "" });
+    if (state.billRef)    items.push({ label: "Ref Â· " + state.billRef, cls: "" });
     items.forEach(x => {
       const c = document.createElement("div");
       c.className = "chip " + x.cls;
@@ -2178,7 +2194,7 @@ const UI = {
  * Upload orchestration
  * ------------------------------------------------------------------------- */
 async function doUpload() {
-  if (!state.token || !state.userEmail) { toast("Session expired — please sign in again", "err"); Auth.signOut(); return; }
+  if (!state.token || !state.userEmail) { toast("Session expired â€” please sign in again", "err"); Auth.signOut(); return; }
   if (!state.allowedCompanies || !state.allowedCompanies.includes(state.companyId)) {
     toast("Your account is not authorised for the selected branch.", "err"); return;
   }
@@ -2201,7 +2217,7 @@ async function doUpload() {
   try {
     let bId = state.batchId, batchFolderId = state.batchFolderId;
     if (!state.phaseAUploaded || !batchFolderId) {
-      // Fallback path (first run on an old session) — do it all synchronously now
+      // Fallback path (first run on an old session) â€” do it all synchronously now
       bId = batchId();
       state.batchId = bId;
       log("Creating batch folder: " + bId);
@@ -2209,7 +2225,7 @@ async function doUpload() {
       state.batchFolderId = batchFolderId;
       const billExt = state.bill.mime.includes("pdf") ? "pdf" :
                       state.bill.mime.includes("png") ? "png" : "jpg";
-      log("Uploading bill." + billExt + "…");
+      log("Uploading bill." + billExt + "â€¦");
       await driveUpload(state.bill.file, "bill." + billExt, batchFolderId);
       tick("bill");
       state.phaseAUploaded = true;
@@ -2237,7 +2253,7 @@ async function doUpload() {
         i++;
         const ext = ((b.photo.mime || "image/jpeg").split("/")[1] || "jpg").split(";")[0];
         const fn = `${keyStem}_b${String(i).padStart(2,"0")}.${ext}`;
-        log("Uploading " + fn + "…");
+        log("Uploading " + fn + "â€¦");
         const blob = dataUrlToBlob(b.photo.dataUrl);
         await driveUpload(blob, fn, labelsFolderId);
         tick(fn);
@@ -2273,14 +2289,14 @@ async function doUpload() {
       source: "adyah-bill-processor-web v3 (parallel pipeline)",
       items: itemsMeta,
     };
-    log("Uploading meta.json…");
+    log("Uploading meta.jsonâ€¦");
     const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: "application/json" });
     await driveUpload(metaBlob, "meta.json", batchFolderId);
     tick("meta.json");
 
     $("progressTitle").textContent = "Upload complete";
     $("progressSub").textContent = "Batch " + bId + " uploaded to Drive.";
-    toast("Batch " + bId + " uploaded ✅", "ok");
+    toast("Batch " + bId + " uploaded âœ…", "ok");
     log("Done. Run /process-vendor-bill on the warehouse PC.");
     $("newBatchBtn").classList.remove("hidden");
   } catch (e) {
@@ -2340,12 +2356,12 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!state.token || !state.userEmail) { toast("Please sign in first", "err"); return; }
     btn.disabled = true;
     const originalText = btn.textContent;
-    btn.textContent = "Uploading bill…";
+    btn.textContent = "Uploading billâ€¦";
     try {
       await phaseAUpload();
       btn.textContent = originalText;
       btn.disabled = false;
-      toast("Bill uploaded — Claude is extracting line items in the background", "ok");
+      toast("Bill uploaded â€” Claude is extracting line items in the background", "ok");
       UI.goStep(2);
     } catch (e) {
       console.error(e);

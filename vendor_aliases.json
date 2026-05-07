@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Per-vendor cache mapping vendor bill line text to the correct Odoo product. Written by /process-vendor-bill after each successful PO, consulted by /extract-bill before fuzzy matching. Key normalization: uppercase + collapse whitespace.",
-  "updated_at": "2026-04-19T00:00:00Z",
+  "updated_at": "2026-04-21T05:50:00Z",
   "vendors": {
     "37ACVPG8182A1ZC": {
       "name": "SRI LAKSHMI SAI AGENCIES",
@@ -14,6 +14,51 @@
           "list_price": 40.0,
           "learned_at": "2026-04-19T00:00:00Z",
           "learned_from_batch": "manual_seed_W123584G26000006",
+          "times_seen": 1
+        }
+      }
+    },
+    "37AA0CR2110L1ZZ": {
+      "name": "WAL-MART INDIA PRIVATE LIMITED",
+      "aliases": {
+        "SURF EXCEL DETERGENT LIQUID 1 L TL": {
+          "product_id": 8519,
+          "name": "SURF EXCEL MATIC LIQUID TOP LOAD 1L ",
+          "barcode": "8909106050433",
+          "hsn": "340220",
+          "list_price": 209.0,
+          "learned_at": "2026-04-21T05:50:00Z",
+          "learned_from_batch": "20260421-100127-ovzs",
+          "times_seen": 1
+        },
+        "SURF EXCEL DETERGENT LIQUID 1 L FL": {
+          "product_id": 38680,
+          "name": "SURF EXCEL MATIC FRONT LOAD 1L ",
+          "barcode": "8909106050440",
+          "hsn": "340220",
+          "list_price": 249.0,
+          "learned_at": "2026-04-21T05:50:00Z",
+          "learned_from_batch": "20260421-100127-ovzs",
+          "times_seen": 1
+        },
+        "SURF EXCEL MATIC LIQUID TL POUCH 1KG": {
+          "product_id": 8505,
+          "name": "SURF EXCEL MATIC  TOP LOAD 1LT PACK",
+          "barcode": "8909106050419",
+          "hsn": "340220",
+          "list_price": 165.0,
+          "learned_at": "2026-04-21T05:50:00Z",
+          "learned_from_batch": "20260421-100127-ovzs",
+          "times_seen": 1
+        },
+        "SURF EXCEL MATIC LIQUID FL POUCH 1KG": {
+          "product_id": 38598,
+          "name": "SURF MATIC LIQUID FRONT LOAD 1LI POUCH ",
+          "barcode": "8909106050426",
+          "hsn": "340220",
+          "list_price": 189.0,
+          "learned_at": "2026-04-21T05:50:00Z",
+          "learned_from_batch": "20260421-100127-ovzs",
           "times_seen": 1
         }
       }

@@ -1292,7 +1292,69 @@ const Catalog = {
 
   byBarcode(bc) {
     return this._barcodeMap.get(String(bc || "").trim()) || null;
-  },
+  }  ,
+  /**
+   * Live Odoo lookup with cache fallback.
+   *
+   * Calls /api/odoo/purchase-ai/product.product/search_read which proxies to
+   * the gateway with X-Gateway-Key injected server-side by Caddy.
+   *
+   * Returns the same shape byBarcode() does, so callers don't change:
+   *   { product_id, name, barcode, hsn, list_price, sale_price, category }
+   *
+   * Network/server errors fall back to the cached products.json (byBarcode()).
+   * A genuine 'product not in Odoo' returns null - which the existing UI
+   * handles by showing the 'Unknown barcode' chip.
+   */
+  async byBarcodeLive(bc) {
+    const code = String(bc || "").trim();
+    if (!code) return null;
+    try {
+      const r = await fetch(
+        "/api/odoo/purchase-ai/product.product/search_read",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            args: [[["barcode", "=", code]]],
+            kwargs: {
+              fields: ["id", "name", "barcode", "list_price",
+                       "categ_id", "l10n_in_hsn_code"],
+              limit: 1,
+            },
+          }),
+        }
+      );
+      if (!r.ok) {
+        // Gateway error (5xx, 401, 403). Fall back to cache.
+        console.warn("[byBarcodeLive] gateway " + r.status + ", falling back to cache");
+        return this.byBarcode(code);
+      }
+      const body = await r.json();
+      const hits = (body && body.result) || [];
+      if (hits.length === 0) {
+        // Odoo confirmed the product doesn't exist.
+        // Existing UI handles null by rendering 'Unknown barcode'.
+        return null;
+      }
+      const p = hits[0];
+      return {
+        product_id: p.id,
+        name: p.name,
+        barcode: p.barcode || code,
+        hsn: p.l10n_in_hsn_code || null,
+        list_price: p.list_price,
+        sale_price: p.list_price,
+        category: Array.isArray(p.categ_id) ? p.categ_id[1] : null,
+      };
+    } catch (err) {
+      // Network down, gateway unreachable, etc. Use cache.
+      console.warn("[byBarcodeLive] error, falling back to cache:", err);
+      return this.byBarcode(code);
+    }
+  }
+,
 
   search(query, limit = 25) {
     const q = (query || "").trim().toLowerCase();
@@ -1631,13 +1693,13 @@ const Scanner = {
     });
     setTimeout(focusIt, 50);
   },
-  onScan(code) {
+  async onScan(code) {
     if (state.items.some(i => i.barcode === code)) {
       if (!confirm("Barcode " + code + " already in this batch. Add another entry?")) {
         return;
       }
     }
-    const meta = Catalog.loaded ? Catalog.byBarcode(code) : null;
+    const meta = Catalog.loaded ? await Catalog.byBarcodeLive(code) : null;
     UI.beginCapture(code, meta);
   },
 };
